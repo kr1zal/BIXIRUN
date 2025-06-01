@@ -1,5 +1,7 @@
-import { Link, Stack } from 'expo-router';
+import React from 'react';
+import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
+import { Image } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -10,9 +12,10 @@ export default function NotFoundScreen() {
       <Stack.Screen options={{ title: 'Oops!' }} />
       <ThemedView style={styles.container}>
         <ThemedText type="title">This screen does not exist.</ThemedText>
-        <Link href="/" style={styles.link}>
-          <ThemedText type="link">Go to home screen!</ThemedText>
-        </Link>
+        <ThemedText style={styles.message}>
+          Please use the navigation menu below to go to another page.
+        </ThemedText>
+        <Image source={require('./assets/logo-bixirun.png')} style={{ width: 80, height: 80, marginTop: 24 }} resizeMode="contain" />
       </ThemedView>
     </>
   );
@@ -25,8 +28,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  link: {
+  message: {
     marginTop: 15,
-    paddingVertical: 15,
+    textAlign: 'center',
+    color: '#666',
   },
 });
