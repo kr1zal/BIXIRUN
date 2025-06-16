@@ -24,7 +24,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Импорт наших новых компонентов
 import ParamRow from '@/components/timer/ParamRow';
-import TimerDisplay from '@/components/timer/TimerDisplay';
 import TimerPresetSelector, { TimerPreset } from '@/components/timer/TimerPresetSelector';
 
 // Импорт функций работы с хранилищем
@@ -81,8 +80,12 @@ export default function TimerScreen() {
             try {
                 const currentUser = await getCurrentUser();
                 setUser(currentUser);
-            } catch (error) {
-                console.error('Error checking user:', error);
+            } catch (error: any) {
+                if (error?.name === 'AuthSessionMissingError' || error?.message?.includes('Auth session missing')) {
+                    setUser(null); // Нет сессии — не логируем ошибку
+                } else {
+                    console.error('Error checking user:', error);
+                }
             }
         };
 
@@ -349,106 +352,91 @@ export default function TimerScreen() {
                     headerTitleAlign: 'center',
                 }}
             />
-
             <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-                {(timer.phase === 'prep' || timer.phase === 'done') ? (
-                    <>
-                        {/* Выбор пресетов */}
-                        <TimerPresetSelector
-                            presets={presets}
-                            activePresetId={activePresetId}
-                            onSelectPreset={handleSelectPreset}
-                            onSavePreset={handleSavePreset}
-                            onDeletePreset={handleDeletePreset}
-                            onSyncPresets={handleSyncPresets}
-                            isSyncing={syncing}
-                            currentSettings={currentSettings}
-                        />
-
-                        <Text style={styles.sectionTitle}>Настройка таймера</Text>
-                        <ParamRow
-                            icon={ICONS[0]}
-                            label="Подготовка (сек)"
-                            value={timer.prep}
-                            onChange={(v) => dispatch(setPrep(v))}
-                        />
-                        <ParamRow
-                            icon={ICONS[1]}
-                            label="Работа (сек)"
-                            value={timer.work}
-                            onChange={(v) => dispatch(setWork(v))}
-                            desc={timer.descWork}
-                            onDescChange={(v) => dispatch(setDescWork(v))}
-                        />
-                        <ParamRow
-                            icon={ICONS[2]}
-                            label="Отдых (сек)"
-                            value={timer.rest}
-                            onChange={(v) => dispatch(setRest(v))}
-                            desc={timer.descRest}
-                            onDescChange={(v) => dispatch(setDescRest(v))}
-                        />
-                        <ParamRow
-                            icon={ICONS[3]}
-                            label="Количество циклов"
-                            value={timer.cycles}
-                            onChange={(v) => dispatch(setCycles(v))}
-                        />
-                        <ParamRow
-                            icon={ICONS[4]}
-                            label="Количество сетов"
-                            value={timer.sets}
-                            onChange={(v) => dispatch(setSets(v))}
-                        />
-                        <ParamRow
-                            icon={ICONS[2]}
-                            label="Отдых между сетами (сек)"
-                            value={timer.restBetweenSets}
-                            onChange={(v) => dispatch(setRestBetweenSets(v))}
-                        />
-
-                        <View style={styles.optionsRow}>
-                            <Text style={styles.optionsLabel}>Автоматический режим</Text>
-                            <TouchableOpacity
-                                style={[
-                                    styles.toggleButton,
-                                    timer.auto && styles.toggleButtonActive
-                                ]}
-                                onPress={() => dispatch(toggleAuto())}
-                            >
-                                <View style={[
-                                    styles.toggleIndicator,
-                                    timer.auto && styles.toggleIndicatorActive
-                                ]} />
-                            </TouchableOpacity>
-                        </View>
-
-                        <TouchableOpacity
-                            style={styles.startButton}
-                            onPress={() => dispatch(startTimer())}
-                        >
-                            <Text style={styles.startButtonText}>Начать тренировку</Text>
-                        </TouchableOpacity>
-                    </>
-                ) : (
-                    // Активная тренировка
-                    <View style={styles.activeWorkoutContainer}>
-                        <TimerDisplay
-                            time={formatTime(timer.seconds)}
-                            phase={phaseInfo.name}
-                            phaseColor={phaseInfo.color}
-                            progress={calculateProgress()}
-                            progressText={getProgressText()}
-                            description={currentDescription}
-                            onPause={handlePlayPause}
-                            onResume={handlePlayPause}
-                            onNext={handleNext}
-                            onReset={handleReset}
-                            running={timer.running}
-                            isFinished={isTimerFinished}
-                        />
-                    </View>
-                )}
+                <TimerPresetSelector
+                    presets={presets}
+                    activePresetId={activePresetId}
+                    onSelectPreset={handleSelectPreset}
+                    onSavePreset={handleSavePreset}
+                    onDeletePreset={handleDeletePreset}
+                    onSyncPresets={handleSyncPresets}
+                    isSyncing={syncing}
+                    currentSettings={currentSettings}
+                />
+                <Text style={styles.sectionTitle}>Настройка таймера</Text>
+                <ParamRow
+                    icon={ICONS[0]}
+                    label="Подготовка (сек)"
+                    value={timer.prep}
+                    onChange={(v) => dispatch(setPrep(v))}
+                />
+                <ParamRow
+                    icon={ICONS[1]}
+                    label="Работа (сек)"
+                    value={timer.work}
+                    onChange={(v) => dispatch(setWork(v))}
+                    desc={timer.descWork}
+                    onDescChange={(v) => dispatch(setDescWork(v))}
+                />
+                <ParamRow
+                    icon={ICONS[2]}
+                    label="Отдых (сек)"
+                    value={timer.rest}
+                    onChange={(v) => dispatch(setRest(v))}
+                    desc={timer.descRest}
+                    onDescChange={(v) => dispatch(setDescRest(v))}
+                />
+                <ParamRow
+                    icon={ICONS[3]}
+                    label="Количество циклов"
+                    value={timer.cycles}
+                    onChange={(v) => dispatch(setCycles(v))}
+                />
+                <ParamRow
+                    icon={ICONS[4]}
+                    label="Количество сетов"
+                    value={timer.sets}
+                    onChange={(v) => dispatch(setSets(v))}
+                />
+                <ParamRow
+                    icon={ICONS[2]}
+                    label="Отдых между сетами (сек)"
+                    value={timer.restBetweenSets}
+                    onChange={(v) => dispatch(setRestBetweenSets(v))}
+                />
+                <View style={styles.optionsRow}>
+                    <Text style={styles.optionsLabel}>Автоматический режим</Text>
+                    <TouchableOpacity
+                        style={[
+                            styles.toggleButton,
+                            timer.auto && styles.toggleButtonActive
+                        ]}
+                        onPress={() => dispatch(toggleAuto())}
+                    >
+                        <View style={[
+                            styles.toggleIndicator,
+                            timer.auto && styles.toggleIndicatorActive
+                        ]} />
+                    </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                    style={styles.startButton}
+                    onPress={() => router.push({
+                        pathname: '/timerWorkout',
+                        params: {
+                            prep: timer.prep,
+                            work: timer.work,
+                            rest: timer.rest,
+                            cycles: timer.cycles,
+                            sets: timer.sets,
+                            restBetweenSets: timer.restBetweenSets,
+                            descWork: timer.descWork,
+                            descRest: timer.descRest
+                        }
+                    })}
+                >
+                    <Text style={styles.startButtonText}>Начать тренировку</Text>
+                </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
     );

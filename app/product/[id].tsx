@@ -1,9 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
-import { addToCart } from '../store/slices/cartSlice';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { addToCart, removeFromCart, updateQuantity } from '../store/slices/cartSlice';
 
 // Импортируем UI компоненты
 import AddToCartButton from '../../components/ui/AddToCartButton';
@@ -13,16 +13,16 @@ import QuantitySelector from '../../components/ui/QuantitySelector';
 
 export default function ProductDetails() {
     const { id } = useLocalSearchParams();
-    const [quantity, setQuantity] = useState(1);
+    const [localQuantity, setLocalQuantity] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const dispatch = useDispatch();
+    const dispatch = useAppDispatch();
     const [activeIndex, setActiveIndex] = useState(0);
     const [galleryHeight, setGalleryHeight] = useState(0);
 
     // Получаем товар из Redux по id
     const productId = Array.isArray(id) ? id[0] : id || '';
-    const rawProduct = useSelector((state: RootState) =>
+    const rawProduct = useAppSelector((state: RootState) =>
         state.products.items.find((p: any) => p.id === productId)
     );
     // Деструктурируем с дефолтами, чтобы не было ошибок типов
@@ -37,13 +37,23 @@ export default function ProductDetails() {
     } = rawProduct || {};
 
     // Получаем состояние корзины (для проверки, есть ли уже товар в корзине)
-    const cartItems = useSelector((state: RootState) => state.cart.items);
-    const isInCart = cartItems.some((item: any) => item.product.id === productId);
+    const cartItems = useAppSelector((state: RootState) => state.cart.items);
+    const cartItem = cartItems.find((item: any) => item.product.id === productId);
+    const isInCart = !!cartItem;
+    const cartQuantity = cartItem?.quantity || 0;
 
     // Обработчик изменения количества
     const handleQuantityChange = useCallback((value: number) => {
-        setQuantity(value);
-    }, []);
+        if (isInCart) {
+            if (value <= 0) {
+                dispatch(removeFromCart(productId));
+            } else {
+                dispatch(updateQuantity({ productId, quantity: value }));
+            }
+        } else {
+            setLocalQuantity(value);
+        }
+    }, [isInCart, dispatch, productId]);
 
     // Обработчик добавления в корзину
     const handleAddToCart = useCallback(() => {
@@ -59,7 +69,7 @@ export default function ProductDetails() {
                     discount: rawProduct.discount,
                     images: rawProduct.images
                 },
-                quantity
+                quantity: localQuantity
             }));
             setIsLoading(false);
             Alert.alert(
@@ -71,7 +81,7 @@ export default function ProductDetails() {
                 ]
             );
         }, 800);
-    }, [dispatch, rawProduct, quantity, router]);
+    }, [dispatch, rawProduct, localQuantity, router]);
 
     // Обработчик перехода в корзину
     const handleGoToCart = useCallback(() => {
@@ -94,7 +104,7 @@ export default function ProductDetails() {
             />
             {/* Галерея изображений */}
             <View style={styles.galleryContainer}>
-                <ProductImageGallery images={images} onGalleryHeightCalculated={setGalleryHeight} />
+                <ProductImageGallery images={images} />
             </View>
             {/* Информация о товаре */}
             <View style={[styles.productInfo, { marginTop: galleryHeight ? 12 : 0 }]}>
@@ -113,7 +123,7 @@ export default function ProductDetails() {
                 {/* Секция добавления в корзину */}
                 <View style={styles.addToCartSection}>
                     <QuantitySelector
-                        value={quantity}
+                        value={isInCart ? cartQuantity : localQuantity}
                         onChange={handleQuantityChange}
                         min={1}
                         max={99}

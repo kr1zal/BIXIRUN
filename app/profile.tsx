@@ -1,11 +1,10 @@
 import { selectCartItemsCount } from '@/app/store/slices/cartSlice';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { Buffer } from 'buffer';
 import * as ImagePicker from 'expo-image-picker';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Stack, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -24,15 +23,16 @@ import { RootState } from './store';
 
 // Supabase
 import {
-    getCurrentUser,
     signIn,
-    signOut,
     signUp,
     supabase
 } from './supabaseClient';
 
 // Timer presets sync
 import { forceSyncWithCloud } from '@/app/utils/timerStorage';
+
+// Auth Provider
+import { useAuth } from '../components/AuthProvider';
 
 // Типы для компонентов авторизации
 interface LoginScreenProps {
@@ -278,20 +278,13 @@ export default function ProfileScreen() {
     const [username, setUsername] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [password, setPassword] = useState('');
-    const [user, setUser] = useState<any>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [mode, setMode] = useState<'login' | 'register'>('login');
     const [profileImage, setProfileImage] = useState<string | null>(null);
     const [isEditingName, setIsEditingName] = useState(false);
 
-    // Add useFocusEffect to refresh user data when the screen comes into focus
-    useFocusEffect(
-        useCallback(() => {
-            console.log("Profile screen in focus, refreshing user data");
-            checkUser();
-            return () => { }; // Cleanup function
-        }, [])
-    );
+    // Используем AuthProvider вместо локального состояния
+    const { session, user, loading: authLoading, signOut: authSignOut } = useAuth();
 
     // Проверяем биометрическую аутентификацию
     const [isBiometricSupported, setIsBiometricSupported] = useState(false);
@@ -317,40 +310,13 @@ export default function ProfileScreen() {
         })();
     }, []);
 
-    // Функция для получения текущего пользователя - обновлена для лучшего обновления данных
-    const checkUser = async () => {
-        try {
-            setLoading(true);
-
-            // Получаем текущую сессию и обновляем её для получения свежих данных
-            const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
-
-            if (sessionError) {
-                console.error('Error refreshing session:', sessionError);
-                const user = await getCurrentUser();
-                setUser(user);
-                if (user) {
-                    setDisplayName(user.user_metadata?.name || user.email?.split('@')[0] || 'Пользователь');
-                    setProfileImage(user.user_metadata?.avatar_url || null);
-                    console.log("Avatar URL from getCurrentUser:", user.user_metadata?.avatar_url);
-                }
-            } else {
-                // Используем данные из обновленной сессии
-                const currentUser = sessionData?.session?.user;
-                setUser(currentUser);
-
-                if (currentUser) {
-                    setDisplayName(currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Пользователь');
-                    setProfileImage(currentUser.user_metadata?.avatar_url || null);
-                    console.log("Avatar URL from refreshSession:", currentUser.user_metadata?.avatar_url);
-                }
-            }
-        } catch (error) {
-            console.error('Error checking user:', error);
-        } finally {
-            setLoading(false);
+    // Обновляем displayName и profileImage когда пользователь меняется
+    useEffect(() => {
+        if (user) {
+            setDisplayName(user.user_metadata?.name || user.email?.split('@')[0] || 'Пользователь');
+            setProfileImage(user.user_metadata?.avatar_url || null);
         }
-    };
+    }, [user]);
 
     // Функция для входа в аккаунт
     const handleSignIn = async () => {
@@ -362,7 +328,6 @@ export default function ProfileScreen() {
 
             setLoading(true);
             await signIn(email, password);
-            await checkUser();
             setPassword('');
         } catch (error: any) {
             Alert.alert('Ошибка входа', error.message || 'Login failed');
@@ -379,19 +344,9 @@ export default function ProfileScreen() {
                 return;
             }
 
-            if (password.length < 6) {
-                Alert.alert('Ошибка', 'Пароль должен содержать не менее 6 символов');
-                return;
-            }
-
             setLoading(true);
             await signUp(email, password);
-            Alert.alert(
-                'Регистрация успешна',
-                'Пожалуйста, проверьте вашу почту для подтверждения аккаунта'
-            );
             setPassword('');
-            setMode('login');
         } catch (error: any) {
             Alert.alert('Ошибка регистрации', error.message || 'Registration failed');
         } finally {
@@ -402,13 +357,10 @@ export default function ProfileScreen() {
     // Функция для выхода из аккаунта
     const handleSignOut = async () => {
         try {
-            setLoading(true);
-            await signOut();
-            setUser(null);
+            await authSignOut();
+            Alert.alert('Успех', 'Вы вышли из аккаунта');
         } catch (error: any) {
             Alert.alert('Ошибка выхода', error.message);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -487,20 +439,12 @@ export default function ProfileScreen() {
     // Функция для выбора изображения из галереи
     const pickImage = async () => {
         try {
-            // Запрашиваем разрешение на доступ к галерее
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Ошибка', 'Для загрузки фото необходимо разрешение на доступ к галерее');
-                return;
-            }
-
-            // Открываем галерею для выбора изображения с включенным base64
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.7,
-                base64: true, // Запрашиваем изображение в формате base64
+                quality: 0.8,
+                base64: true,
             });
 
             if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -543,31 +487,30 @@ export default function ProfileScreen() {
                         });
 
                     if (error) {
-                        console.error('Storage error:', error);
                         throw error;
                     }
 
-                    // Получаем публичный URL загруженного изображения
-                    const { data: publicUrlData } = supabase.storage
+                    console.log('Файл загружен:', data);
+
+                    // Получаем публичный URL загруженного файла
+                    const { data: urlData } = supabase.storage
                         .from('avatars')
                         .getPublicUrl(filePath);
 
-                    const avatarUrl = publicUrlData.publicUrl;
+                    const publicUrl = urlData.publicUrl;
+                    console.log('Public URL:', publicUrl);
 
-                    console.log('Загруженный URL:', avatarUrl);
-
-                    // Обновляем профиль пользователя
+                    // Обновляем профиль пользователя с новым URL аватара
                     const { error: updateError } = await supabase.auth.updateUser({
-                        data: { avatar_url: avatarUrl }
+                        data: { avatar_url: publicUrl }
                     });
 
                     if (updateError) {
-                        console.error('Error updating user metadata:', updateError);
                         throw updateError;
                     }
 
-                    // Принудительно обновляем данные пользователя
-                    await checkUser();
+                    // Обновляем локальное состояние
+                    setProfileImage(publicUrl);
 
                     Alert.alert('Успешно', 'Фото профиля обновлено');
                 } catch (error: any) {
@@ -578,7 +521,9 @@ export default function ProfileScreen() {
                     );
 
                     // Сбрасываем временное изображение в случае ошибки
-                    await checkUser();
+                    if (user) {
+                        setProfileImage(user.user_metadata?.avatar_url || null);
+                    }
                 } finally {
                     setLoading(false);
                 }
@@ -607,9 +552,6 @@ export default function ProfileScreen() {
                 throw error;
             }
 
-            // Принудительно обновляем данные пользователя
-            await checkUser();
-
             Alert.alert('Успешно', 'Имя пользователя обновлено');
             setIsEditingName(false);
         } catch (error: any) {
@@ -624,6 +566,18 @@ export default function ProfileScreen() {
     const goToCart = () => {
         router.replace('/cart');
     };
+
+    // Показываем загрузку пока проверяется сессия
+    if (authLoading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                    <ActivityIndicator size="large" color="#0080FF" />
+                    <Text style={{ marginTop: 16, color: '#666' }}>Проверка сессии...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -753,16 +707,9 @@ export default function ProfileScreen() {
                         <TouchableOpacity
                             style={styles.signOutButton}
                             onPress={handleSignOut}
-                            disabled={loading}
                         >
-                            {loading ? (
-                                <ActivityIndicator size="small" color="#fff" />
-                            ) : (
-                                <>
-                                    <Ionicons name="log-out-outline" size={20} color="#fff" />
-                                    <Text style={styles.signOutButtonText}>Выйти из аккаунта</Text>
-                                </>
-                            )}
+                            <Ionicons name="log-out-outline" size={20} color="#fff" />
+                            <Text style={styles.signOutButtonText}>Выйти</Text>
                         </TouchableOpacity>
 
                         <View style={styles.bottomSpacer} />

@@ -5,7 +5,6 @@ import {
     deleteTimerPreset as deleteSupabasePreset,
     getTimerPresets as getSupabasePresets,
     isUserLoggedIn,
-    TimerPresetData,
     updateTimerPreset as updateSupabasePreset
 } from '../supabaseClient';
 import { getData, STORAGE_KEYS, storeData } from './storage';
@@ -138,7 +137,7 @@ export const loadLastUsedTimerSettings = async (): Promise<Omit<TimerPreset, 'id
 /**
  * Конвертирует данные пресета из формата Supabase в формат приложения
  */
-const convertSupabaseToAppPreset = (supabasePreset: TimerPresetData): TimerPreset => {
+const convertSupabaseToAppPreset = (supabasePreset: any): TimerPreset => {
     return {
         id: supabasePreset.id || supabasePreset.local_id || Date.now().toString(),
         name: supabasePreset.name,
@@ -156,7 +155,7 @@ const convertSupabaseToAppPreset = (supabasePreset: TimerPresetData): TimerPrese
 /**
  * Конвертирует данные пресета из формата приложения в формат Supabase
  */
-const convertAppToSupabasePreset = (appPreset: TimerPreset): Omit<TimerPresetData, 'id' | 'user_id' | 'created_at'> => {
+const convertAppToSupabasePreset = (appPreset: TimerPreset): any => {
     return {
         name: appPreset.name,
         prep: appPreset.prep,
@@ -251,7 +250,7 @@ export const updateTimerPreset = async (preset: TimerPreset): Promise<TimerPrese
     try {
         // Обновляем в Supabase
         try {
-            await updateSupabasePreset(preset.id, convertAppToSupabasePreset(preset));
+            await updateSupabasePreset({ ...convertAppToSupabasePreset(preset), id: preset.id });
             // Обновляем временную метку синхронизации
             syncTimestamps['timer_presets'] = Date.now();
         } catch (error) {

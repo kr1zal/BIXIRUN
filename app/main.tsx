@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -46,6 +45,8 @@ const GRID_COLUMN_COUNT = 2;
 const GRID_GAP = 8;
 const GRID_CARD_WIDTH = (SCREEN_WIDTH - GRID_GAP * 3) / 2;
 const GRID_CARD_HEIGHT = 230;
+
+const TIMER_COVER_URL = 'https://wesrkttwjuvclvfkuxzx.supabase.co/storage/v1/object/public/images/Timer/MainTimer/main_timer.webp';
 
 // Мемоизированный компонент карточки товара
 const ProductGridCard = memo(({ item, onPress }: { item: ProductItem; onPress: () => void }) => {
@@ -147,21 +148,18 @@ export default function MainScreen() {
                 onPress={handleTimerPress}
                 activeOpacity={0.85}
             >
-                <LinearGradient
-                    colors={['#43cea2', '#185a9d']}
-                    style={styles.bigTimerBtnInner}
-                >
+                <Image
+                    source={{ uri: TIMER_COVER_URL }}
+                    style={styles.timerCoverImage}
+                    resizeMode="cover"
+                />
+                <View style={styles.bigTimerBtnInner}>
                     <Ionicons name="timer" size={48} color="#fff" style={{ marginRight: 18 }} />
                     <Text style={styles.bigTimerBtnText}>Таймер</Text>
-                </LinearGradient>
+                </View>
             </TouchableOpacity>
             <Text style={styles.sectionTitle}>Статьи</Text>
-            <View style={styles.articlesHeaderRow}>
-                <Text style={styles.sectionTitle}></Text>
-                <TouchableOpacity style={styles.allArticlesBtn} onPress={() => router.replace('/blog')}>
-                    <Text style={styles.allArticlesBtnText}>Все статьи</Text>
-                </TouchableOpacity>
-            </View>
+            <View style={styles.articlesHeaderRow} />
             <FlatList
                 data={articles}
                 renderItem={renderArticle}
@@ -328,24 +326,33 @@ const styles = StyleSheet.create({
         lineHeight: 22,
     },
     bigTimerBtn: {
-        width: '92%',
-        alignSelf: 'center',
-        marginTop: 18,
+        width: 'auto',
+        alignSelf: 'stretch',
+        marginHorizontal: 3,
+        marginTop: 2,
         marginBottom: 10,
         borderRadius: 22,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: '#3a9db5',
-        height: Dimensions.get('window').height * 0.5, // 50% экрана
+        height: 540, // фиксированная высота
     },
     bigTimerBtnInner: {
         flex: 1,
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'flex-start',
+        justifyContent: 'flex-end',
         height: '100%',
         borderRadius: 22,
         paddingHorizontal: 18,
+        paddingTop: 24,
+        paddingRight: 24,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 1,
     },
     bigTimerBtnText: {
         color: '#fff',
@@ -353,22 +360,26 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         letterSpacing: 1,
     },
+    timerCoverImage: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+    },
     articlesHeaderRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        marginRight: 16,
-        marginBottom: 2,
+        justifyContent: 'space-between',
+        paddingHorizontal: 8,
     },
     allArticlesBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 8,
-        backgroundColor: '#e3f2fd',
+        backgroundColor: '#1976d2',
+        borderRadius: 16,
+        padding: 8,
     },
     allArticlesBtnText: {
-        color: '#1976d2',
-        fontWeight: 'bold',
+        color: '#fff',
         fontSize: 14,
+        fontWeight: 'bold',
     },
 }); 

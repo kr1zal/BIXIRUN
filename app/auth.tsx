@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { useAuth } from '../components/AuthProvider';
 import { signIn, signUp } from './supabaseClient';
 
 const { width } = Dimensions.get('window');
@@ -53,6 +54,14 @@ export default function AuthScreen() {
     const [error, setError] = useState('');
     const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
     const router = useRouter();
+    const { user } = useAuth();
+
+    // Если пользователь уже авторизован, редиректим на главную
+    useEffect(() => {
+        if (user) {
+            router.replace('/main');
+        }
+    }, [user, router]);
 
     useEffect(() => {
         // Check if biometric authentication is available
@@ -85,7 +94,7 @@ export default function AuthScreen() {
         setError('');
         try {
             await signIn(email, password);
-            router.replace('/main');
+            // AuthProvider автоматически обновит состояние и произойдет редирект
         } catch (err: any) {
             setError(err.message || 'Login failed');
         } finally {
@@ -105,7 +114,7 @@ export default function AuthScreen() {
 
         try {
             await signUp(email, password);
-            router.replace('/main');
+            // AuthProvider автоматически обновит состояние и произойдет редирект
         } catch (err: any) {
             setError(err.message || 'Registration failed');
         } finally {
@@ -131,6 +140,18 @@ export default function AuthScreen() {
         setIsLogin(!isLogin);
         setError('');
     };
+
+    // Если пользователь уже авторизован, показываем загрузку
+    if (user) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                    <ActivityIndicator size="large" color="#0080FF" />
+                    <Text style={{ marginTop: 16, color: '#666' }}>Переход в приложение...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
