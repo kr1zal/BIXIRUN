@@ -1,3 +1,102 @@
+# BIXIRUN - Menu Fixed
+
+React Native приложение с исправленной навигацией и реальными товарами на главной странице.
+
+## Исправления
+
+### 🔧 Исправлена навигация меню
+
+**Проблема:** Меню навигации пропадало при переходах через карточки товаров и статей.
+
+**Решение:** 
+- Изменены все вызовы `router.push()` на `router.replace()` для консистентности
+- Исправлена логика показа меню в `AppLayout.tsx`
+- Теперь меню работает корректно на всех страницах
+
+### 🛍️ Реализован блок товаров на главной странице
+
+**Что сделано:**
+- Заменены заглушки (`mockProducts`) на реальные товары из Redux store
+- Подключена загрузка данных через Supabase
+- Добавлены состояния загрузки и обработка ошибок
+- Реализовано отображение:
+  - Только 1 картинка на товар (первая из массива)
+  - Название товара (обрезается если длинное)
+  - Цена и старая цена
+  - Переход на страницу товара при нажатии
+
+## Технологии
+
+- React Native
+- Expo Router
+- Redux Toolkit
+- Supabase
+- TypeScript
+
+## Структура проекта
+
+```
+app/
+├── main.tsx          # Главная страница с товарами
+├── products.tsx      # Каталог товаров
+├── blog.tsx          # Блог
+├── cart.tsx          # Корзина
+└── store/            # Redux store
+    ├── slices/
+    │   ├── productsSlice.ts
+    │   └── cartSlice.ts
+    └── hooks.ts
+
+components/
+├── AppLayout.tsx     # Основной layout с навигацией
+├── FooterNavigation.tsx  # Меню навигации
+└── ...
+
+```
+
+## Установка и запуск
+
+```bash
+npm install
+npm start
+```
+
+## Основные исправления в коде
+
+### AppLayout.tsx
+```typescript
+// Исправлена логика показа меню
+const hideTabBarRoutes = ['/timerWorkout', '/auth', '/splash'];
+const showTabBar = !hideTabBarRoutes.some(route => pathname === route);
+```
+
+### Навигация
+```typescript
+// Везде используется router.replace() вместо router.push()
+const handleProductPress = (id: string) => {
+    router.replace(`/product/${id}`);
+};
+```
+
+### main.tsx
+```typescript
+// Подключен Redux store для реальных товаров
+const { items: products, status, error } = useAppSelector(state => state.products);
+
+useEffect(() => {
+    if (status === 'idle') {
+        dispatch(fetchProducts());
+    }
+}, [dispatch, status]);
+```
+
+## Результат
+
+✅ Меню навигации работает стабильно на всех страницах  
+✅ Реальные товары загружаются на главной странице  
+✅ Корректные переходы между страницами  
+✅ Обработка состояний загрузки и ошибок  
+
 # BIXIRUN
 
 Приложение для интервальных тренировок с синхронизацией пресетов таймера через Supabase.
