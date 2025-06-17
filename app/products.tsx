@@ -42,7 +42,7 @@ const QuantityCartButton = ({ quantity, onIncrement, onDecrement }: { quantity: 
     const router = useRouter();
     return (
         <View style={styles.cartRow}>
-            <TouchableOpacity onPress={() => router.replace('/cart')} style={styles.cartSquare}>
+            <TouchableOpacity onPress={() => router.push('/cart')} style={styles.cartSquare}>
                 <Ionicons name="cart" size={20} color="#1976d2" />
             </TouchableOpacity>
             <TouchableOpacity onPress={onDecrement} style={styles.cartSquare}>

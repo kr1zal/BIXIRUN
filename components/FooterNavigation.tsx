@@ -65,6 +65,8 @@ export const FooterNavigation = memo(() => {
     // Получаем счетчик товаров из Redux
     const cartItemsCount = useSelector(selectCartItemsCount);
 
+
+
     // Check if a path is active
     const isActive = useCallback((tab: typeof tabs[0]) => {
         if (tab.path === '/blog') {

@@ -655,7 +655,7 @@ export default function ProfileScreen() {
                                 contentContainerStyle={styles.recentProductsContainer}
                             >
                                 {recentProducts.map((item) => (
-                                    <TouchableOpacity key={item.id} style={styles.recentProductCard} onPress={() => router.replace(`/product/${item.id}`)}>
+                                    <TouchableOpacity key={item.id} style={styles.recentProductCard} onPress={() => router.push(`/product/${item.id}`)}>
                                         {item.images && item.images[0] ? (
                                             <Image source={{ uri: item.images[0] }} style={styles.productImagePlaceholder} />
                                         ) : (

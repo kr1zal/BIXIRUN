@@ -77,7 +77,7 @@ export default function ProductDetails() {
                 `${rawProduct.name} успешно добавлен в корзину`,
                 [
                     { text: "Продолжить покупки", style: "cancel" },
-                    { text: "Перейти в корзину", onPress: () => router.replace('/cart') }
+                    { text: "Перейти в корзину", onPress: () => router.push('/cart') }
                 ]
             );
         }, 800);
@@ -85,7 +85,7 @@ export default function ProductDetails() {
 
     // Обработчик перехода в корзину
     const handleGoToCart = useCallback(() => {
-        router.replace('/cart');
+        router.push('/cart');
     }, [router]);
 
     if (!rawProduct) {

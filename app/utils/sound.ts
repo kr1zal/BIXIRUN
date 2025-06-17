@@ -1,15 +1,12 @@
-import { Audio } from 'expo-av';
 
 export async function playBeep() {
     try {
-        const beep = require('../../assets/sounds/beep.mp3');
-        if (!beep) return;
-        const { sound } = await Audio.Sound.createAsync(beep);
-        await sound.playAsync();
-        sound.setOnPlaybackStatusUpdate(status => {
-            if (status.isLoaded && status.didJustFinish) sound.unloadAsync();
-        });
+        // Временно отключаем звук до замены файла
+        console.log('Звук отключен - требуется корректный звуковой файл');
+        return;
+
     } catch (e) {
-        console.warn('Ошибка проигрывания бипа:', e);
+        console.error('Ошибка проигрывания звука:', e);
+        // Не показываем Alert, только логируем
     }
 } 

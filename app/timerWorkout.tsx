@@ -1,238 +1,197 @@
 import ProgressCircle from '@/components/timer/ProgressCircle';
+import { useTimer } from '@/hooks/useTimer';
 import { Ionicons } from '@expo/vector-icons';
-import { Camera, CameraView } from 'expo-camera';
+import { CameraType, CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { playBeep } from './utils/sound';
 
 export default function TimerWorkoutScreen() {
     const router = useRouter();
-    // Получаем параметры из route
-    const params = useLocalSearchParams();
-    // Инициализируем локальное состояние таймера из params
-    const [timerState, setTimerState] = useState({
-        prep: Number(params.prep) || 2,
-        work: Number(params.work) || 60,
-        rest: Number(params.rest) || 0,
-        cycles: Number(params.cycles) || 8,
-        sets: Number(params.sets) || 1,
-        restBetweenSets: Number(params.restBetweenSets) || 0,
-        descWork: params.descWork ? String(params.descWork) : '',
-        descRest: params.descRest ? String(params.descRest) : ''
-    });
-    const [timer, setTimer] = useState({
-        phase: 'prep',
-        seconds: Number(params.prep) || 2,
-        intervalIdx: 0,
-        setIdx: 0,
-        running: false
-    });
-    const cameraRef = useRef(null);
-    const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-    const [isRecording, setIsRecording] = useState(false);
-    const [cameraReady, setCameraReady] = useState(false);
-    const [videoTimer, setVideoTimer] = useState(0);
-    const [intervalId, setIntervalId] = useState<any>(null);
-    const [facing, setFacing] = useState<'front' | 'back'>('back');
 
-    // Camera permissions
+    // Используем единый хук для таймера
+    const { timer, start, pause, reset, progress, getPhaseInfo } = useTimer();
+
+    // Используем правильные хуки для разрешений
+    const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+    const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
+    const [mediaLibraryPermission, requestMediaLibraryPermission] = MediaLibrary.usePermissions();
+
+    const [facing, setFacing] = useState<CameraType>('back');
+    const [isRecording, setIsRecording] = useState(false);
+    const [videoTimer, setVideoTimer] = useState(0);
+    const [cameraReady, setCameraReady] = useState(false);
+    const cameraRef = useRef<any>(null);
+
+    // Запрос разрешений при загрузке
     useEffect(() => {
-        (async () => {
-            const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
-            const { status: audioStatus } = await Camera.requestMicrophonePermissionsAsync();
-            const { status: mediaStatus } = await MediaLibrary.requestPermissionsAsync();
-            setHasPermission(cameraStatus === 'granted' && audioStatus === 'granted' && mediaStatus === 'granted');
-            if (!(cameraStatus === 'granted' && audioStatus === 'granted' && mediaStatus === 'granted')) {
-                Alert.alert('Нет доступа', 'Для записи видео нужны разрешения на камеру, микрофон и галерею');
-            }
-        })();
+        if (!cameraPermission?.granted) {
+            requestCameraPermission();
+        }
+        if (!microphonePermission?.granted) {
+            requestMicrophonePermission();
+        }
+        if (!mediaLibraryPermission?.granted) {
+            requestMediaLibraryPermission();
+        }
     }, []);
 
-    // Таймерный тик + звук
-    useEffect(() => {
-        if (!timer.running) return;
-        const id = setInterval(() => {
-            if (timer.seconds > 0) {
-                setTimer((prev) => ({ ...prev, seconds: prev.seconds - 1 }));
-            } else {
-                // Переход по фазам
-                let nextPhase = timer.phase;
-                let nextSeconds = 0;
-                let nextIntervalIdx = timer.intervalIdx;
-                let nextSetIdx = timer.setIdx;
-                if (timer.phase === 'prep') {
-                    nextPhase = 'work';
-                    nextSeconds = timerState.work;
-                    nextIntervalIdx = 1;
-                } else if (timer.phase === 'work') {
-                    if (timerState.cycles > 1 && timer.intervalIdx < timerState.cycles) {
-                        nextPhase = 'rest';
-                        nextSeconds = timerState.rest;
-                    } else if (timerState.sets > 1 && timer.setIdx < timerState.sets - 1) {
-                        nextPhase = 'restSet';
-                        nextSeconds = timerState.restBetweenSets;
-                    } else {
-                        nextPhase = 'done';
-                        nextSeconds = 0;
-                    }
-                    nextIntervalIdx = timer.intervalIdx + 1;
-                } else if (timer.phase === 'rest') {
-                    nextPhase = 'work';
-                    nextSeconds = timerState.work;
-                } else if (timer.phase === 'restSet') {
-                    nextSetIdx = timer.setIdx + 1;
-                    nextIntervalIdx = 1;
-                    nextPhase = 'work';
-                    nextSeconds = timerState.work;
-                } else if (timer.phase === 'done') {
-                    setTimer((prev) => ({ ...prev, running: false }));
-                    return;
-                }
-                setTimer({
-                    ...timer,
-                    phase: nextPhase,
-                    seconds: nextSeconds,
-                    intervalIdx: nextIntervalIdx,
-                    setIdx: nextSetIdx,
-                });
-                playBeep().catch(console.error);
-            }
-        }, 1000);
-        return () => clearInterval(id);
-    }, [timer.running, timer.seconds]);
+    // Проверяем все разрешения
+    const hasAllPermissions = cameraPermission?.granted &&
+        microphonePermission?.granted &&
+        mediaLibraryPermission?.granted;
 
-    // Видео запись
+    // Таймер для видео
+    useEffect(() => {
+        if (!isRecording) return;
+
+        const id = setInterval(() => {
+            setVideoTimer(prev => prev + 1);
+        }, 1000);
+
+        return () => clearInterval(id);
+    }, [isRecording]);
+
+    // Видео запись с правильным сохранением
     const startRecording = async () => {
-        if (!cameraRef.current) return;
-        setIsRecording(true);
-        setVideoTimer(0);
-        const id = setInterval(() => setVideoTimer((t) => t + 1), 1000);
-        setIntervalId(id);
+        if (!cameraRef.current || !cameraReady) {
+            Alert.alert('Ошибка', 'Камера не готова');
+            return;
+        }
+
         try {
-            const video = await (cameraRef.current as any).recordAsync({
+            setIsRecording(true);
+            setVideoTimer(0);
+
+            // Просто начинаем запись, сохранение будет в stopRecording
+            await (cameraRef.current as any).recordAsync({
                 quality: '720p',
-                maxDuration: 600,
+                maxDuration: 3600, // 1 час максимум
                 mute: false,
             });
-            if (intervalId) clearInterval(intervalId);
+
+        } catch (error) {
+            console.error('Recording error:', error);
+            Alert.alert('Ошибка', 'Не удалось начать запись видео');
             setIsRecording(false);
             setVideoTimer(0);
-            try {
-                await MediaLibrary.saveToLibraryAsync(video.uri);
-                Alert.alert('Видео сохранено', 'Тренировка записана и сохранена в галерею');
-            } catch (e) {
-                Alert.alert('Ошибка', 'Не удалось сохранить видео');
-            }
-        } catch (e) {
-            setIsRecording(false);
-            if (intervalId) clearInterval(intervalId);
-            Alert.alert('Ошибка', 'Не удалось начать запись');
         }
     };
 
     const stopRecording = async () => {
-        if (!cameraRef.current) return;
+        if (!cameraRef.current || !isRecording) return;
+
         try {
-            await (cameraRef.current as any).stopRecording();
-        } catch (e) {
+            // Останавливаем запись и получаем видео
+            const video = await (cameraRef.current as any).stopRecording();
+
+            // Сохраняем видео в галерею
+            if (video?.uri) {
+                try {
+                    const asset = await MediaLibrary.saveToLibraryAsync(video.uri);
+                    Alert.alert(
+                        'Видео сохранено',
+                        'Тренировка записана и сохранена в галерею',
+                        [{ text: 'OK' }]
+                    );
+                    console.log('Video saved:', asset);
+                } catch (saveError) {
+                    console.error('Save error:', saveError);
+                    Alert.alert('Ошибка', 'Не удалось сохранить видео в галерею');
+                }
+            }
+        } catch (error) {
+            console.error('Stop recording error:', error);
             Alert.alert('Ошибка', 'Не удалось остановить запись');
+        } finally {
+            setIsRecording(false);
+            setVideoTimer(0);
         }
     };
 
     // Старт тренировки (таймер + видео)
     const handleStart = () => {
-        setTimer({
-            phase: 'prep',
-            seconds: timerState.prep,
-            intervalIdx: 0,
-            setIdx: 0,
-            running: true
-        });
+        start();
         startRecording();
     };
 
-    // Функция для вычисления максимального значения для текущей фазы
-    const getMaxValue = () => {
-        switch (timer.phase) {
-            case 'prep': return timerState.prep;
-            case 'work': return timerState.work;
-            case 'rest': return timerState.rest;
-            case 'restSet': return timerState.restBetweenSets;
-            default: return 1;
-        }
-    };
-    const maxValue = getMaxValue();
-    const progress = maxValue > 0 ? 1 - timer.seconds / maxValue : 1;
-
-    // Обновлённая кнопка стоп
+    // Остановка таймера и видео
     const handleStop = async () => {
-        setTimer({
-            phase: 'prep',
-            seconds: timerState.prep,
-            intervalIdx: 0,
-            setIdx: 0,
-            running: false
-        });
-        setIsRecording(false);
-        setVideoTimer(0);
-        if (isRecording && cameraRef.current) {
-            try {
-                await (cameraRef.current as any).stopRecording();
-                // Видео сохранится автоматически, если нет — можно добавить Alert для ручного сохранения
-            } catch (e) {
-                Alert.alert('Ошибка', 'Не удалось остановить запись');
-            }
+        reset();
+        if (isRecording) {
+            await stopRecording();
         }
     };
 
     // Пауза таймера
     const handlePause = () => {
-        setTimer((prev) => ({ ...prev, running: false }));
+        pause();
     };
+
     // Продолжить таймер
     const handleResume = () => {
-        setTimer((prev) => ({ ...prev, running: true }));
+        start();
     };
+
     // Сброс таймера и остановка видео
     const handleReset = async () => {
-        setTimer({
-            phase: 'prep',
-            seconds: timerState.prep,
-            intervalIdx: 0,
-            setIdx: 0,
-            running: false
-        });
-        setIsRecording(false);
-        setVideoTimer(0);
-        if (isRecording && cameraRef.current) {
-            try {
-                await (cameraRef.current as any).stopRecording();
-            } catch (e) {
-                // ignore
-            }
+        reset();
+        if (isRecording) {
+            await stopRecording();
         }
     };
 
-    if (hasPermission === null) {
-        return <View style={styles.center}><Text>Запрашиваем разрешения...</Text></View>;
+    // Проверка разрешений
+    if (!cameraPermission || !microphonePermission || !mediaLibraryPermission) {
+        return <View style={styles.center}><Text>Загрузка разрешений...</Text></View>;
     }
-    if (hasPermission === false) {
-        return <View style={styles.center}><Text>Нет доступа к камере/микрофону/галерее</Text></View>;
+
+    if (!hasAllPermissions) {
+        return (
+            <View style={styles.center}>
+                <Text style={{ textAlign: 'center', marginBottom: 20 }}>
+                    Для записи тренировки нужны разрешения на камеру, микрофон и галерею
+                </Text>
+                {!cameraPermission.granted && (
+                    <TouchableOpacity
+                        style={styles.permissionButton}
+                        onPress={requestCameraPermission}
+                    >
+                        <Text style={styles.permissionButtonText}>Разрешить камеру</Text>
+                    </TouchableOpacity>
+                )}
+                {!microphonePermission.granted && (
+                    <TouchableOpacity
+                        style={styles.permissionButton}
+                        onPress={requestMicrophonePermission}
+                    >
+                        <Text style={styles.permissionButtonText}>Разрешить микрофон</Text>
+                    </TouchableOpacity>
+                )}
+                {!mediaLibraryPermission.granted && (
+                    <TouchableOpacity
+                        style={styles.permissionButton}
+                        onPress={requestMediaLibraryPermission}
+                    >
+                        <Text style={styles.permissionButtonText}>Разрешить галерею</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+        );
     }
+
+    const phaseInfo = getPhaseInfo();
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
             <View style={{ flex: 1 }}>
                 <View style={{ flex: 2, position: 'relative' }}>
-                    {/* @ts-ignore */}
                     <CameraView
                         ref={cameraRef}
                         style={{ flex: 1 }}
                         facing={facing}
-                        ratio="16:9"
                         onCameraReady={() => setCameraReady(true)}
                     />
                     <TouchableOpacity
@@ -241,23 +200,38 @@ export default function TimerWorkoutScreen() {
                     >
                         <Ionicons name="camera-reverse-outline" size={28} color="#fff" />
                     </TouchableOpacity>
+
+                    {/* Индикатор записи */}
+                    {isRecording && (
+                        <View style={{ position: 'absolute', top: 24, left: 24, backgroundColor: 'rgba(255,0,0,0.8)', borderRadius: 12, padding: 8, flexDirection: 'row', alignItems: 'center' }}>
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff', marginRight: 8 }} />
+                            <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
+                                {Math.floor(videoTimer / 60)}:{(videoTimer % 60).toString().padStart(2, '0')}
+                            </Text>
+                        </View>
+                    )}
                 </View>
+
                 <View style={{ flex: 3, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -24, padding: 16, alignItems: 'center' }}>
                     {/* Таймер UI */}
-                    <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>
-                        {timer.phase === 'prep' ? 'Подготовка' : timer.phase === 'work' ? 'Работа' : timer.phase === 'rest' ? 'Отдых' : timer.phase === 'restSet' ? 'Отдых между сетами' : 'Завершено'}
+                    <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 8, color: phaseInfo.color }}>
+                        {phaseInfo.name}
                     </Text>
-                    {(timer.phase !== 'done') && (
+
+                    {timer.phase !== 'done' && (
                         <Text style={{ fontSize: 16, color: '#888', textAlign: 'center', marginBottom: 8 }}>
-                            {`Интервал ${timer.intervalIdx || 1}/${timerState.cycles}  Сет ${timer.setIdx + 1}/${timerState.sets}`}
+                            {`Интервал ${timer.intervalIdx || 1}/${timer.cycles}  Сет ${timer.setIdx + 1}/${timer.sets}`}
                         </Text>
                     )}
-                    {/* Время сверху */}
+
+                    {/* Время */}
                     <Text style={{ fontSize: 40, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>
                         {String(timer.seconds).padStart(2, '0')}
                     </Text>
+
                     {/* Круговой прогресс */}
-                    <ProgressCircle progress={progress} size={160} stroke={10} color="#e53935" showPercentage={true} />
+                    <ProgressCircle progress={progress} size={160} stroke={10} color={phaseInfo.color} showPercentage={true} />
+
                     {/* Кнопки управления */}
                     <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 24, gap: 12 }}>
                         {/* Старт */}
@@ -266,29 +240,34 @@ export default function TimerWorkoutScreen() {
                                 <Text style={styles.startButtonText}>Старт</Text>
                             </TouchableOpacity>
                         )}
+
                         {/* Пауза */}
                         {timer.running && (
                             <TouchableOpacity style={styles.pauseButton} onPress={handlePause}>
                                 <Text style={styles.pauseButtonText}>Пауза</Text>
                             </TouchableOpacity>
                         )}
+
                         {/* Продолжить */}
                         {!timer.running && timer.phase !== 'done' && timer.phase !== 'prep' && (
                             <TouchableOpacity style={styles.startButton} onPress={handleResume}>
                                 <Text style={styles.startButtonText}>Продолжить</Text>
                             </TouchableOpacity>
                         )}
+
                         {/* Стоп */}
                         {timer.running && (
                             <TouchableOpacity style={styles.stopButton} onPress={handleStop}>
                                 <Text style={styles.stopButtonText}>Стоп</Text>
                             </TouchableOpacity>
                         )}
+
                         {/* Сброс */}
                         <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
                             <Text style={styles.resetButtonText}>Сброс</Text>
                         </TouchableOpacity>
                     </View>
+
                     {/* Кнопки перехода */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 24, width: '100%' }}>
                         <TouchableOpacity style={styles.navButton} onPress={() => router.replace('/')}>
@@ -305,7 +284,25 @@ export default function TimerWorkoutScreen() {
 }
 
 const styles = StyleSheet.create({
-    center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    center: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20
+    },
+    permissionButton: {
+        backgroundColor: '#4caf50',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 10,
+        minWidth: 200,
+        alignItems: 'center',
+    },
+    permissionButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
     startButton: {
         backgroundColor: '#4caf50',
         padding: 16,

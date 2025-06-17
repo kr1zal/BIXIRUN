@@ -19,7 +19,7 @@ import {
 import { Audio } from 'expo-av';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, Vibration, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Импорт наших новых компонентов
@@ -37,6 +37,9 @@ import {
 
 // Импорт функций Supabase
 import { getCurrentUser } from './supabaseClient';
+
+// Импорт хука для таймера
+import { useTimer } from '@/hooks/useTimer';
 
 const ICONS = [
     '🚶', // preparation
@@ -67,6 +70,9 @@ export default function TimerScreen() {
     const dispatch = useAppDispatch();
     const timer = useAppSelector((state: RootState) => state.timer);
     const router = useRouter();
+
+    // Используем единый хук для таймера (только для отображения, не для логики)
+    const { formatTime: timerFormatTime, getPhaseInfo: timerGetPhaseInfo, getProgressText: timerGetProgressText } = useTimer();
 
     // Состояние для пресетов таймера
     const [presets, setPresets] = useState<TimerPreset[]>([]);
@@ -139,27 +145,17 @@ export default function TimerScreen() {
         timer.phase
     ]);
 
-    // Timer logic
+    // Интервал для таймера
     useInterval(() => {
-        if (timer.running) {
-            if (timer.seconds > 0) {
-                dispatch(decrementSeconds());
-            } else {
-                // Move to next phase when current phase is complete
-                dispatch(nextPhase());
-
-                // Vibrate when changing phases
-                if (Platform.OS === 'ios' || Platform.OS === 'android') {
-                    Vibration.vibrate(500);
-                }
-
-                // Play sound
-                playSound().catch(console.error);
-            }
+        if (timer.running && timer.seconds > 0) {
+            dispatch(decrementSeconds());
+        } else if (timer.running && timer.seconds === 0) {
+            dispatch(nextPhase());
+            playSound();
         }
     }, timer.running ? 1000 : null);
 
-    // Function to play sound
+    // Play sound function
     async function playSound() {
         try {
             const { sound } = await Audio.Sound.createAsync(
@@ -169,34 +165,6 @@ export default function TimerScreen() {
         } catch (error) {
             console.error('Error playing sound:', error);
         }
-    }
-
-    // Get phase name and color
-    function getPhaseInfo() {
-        switch (timer.phase) {
-            case 'prep': return { name: 'Подготовка', color: '#fb8c00' };
-            case 'work': return { name: 'Работа', color: '#e53935' };
-            case 'rest': return { name: 'Отдых', color: '#43a047' };
-            case 'restSet': return { name: 'Отдых между сетами', color: '#1e88e5' };
-            case 'done': return { name: 'Завершено', color: '#8e24aa' };
-        }
-    }
-
-    // Format time as MM:SS
-    function formatTime(secs: number) {
-        const minutes = Math.floor(secs / 60);
-        const seconds = secs % 60;
-        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    // Get progress description
-    function getProgressText() {
-        if (timer.phase === 'done') return 'Тренировка завершена';
-
-        const currentInterval = timer.intervalIdx === 0 ? '' : `Интервал ${timer.intervalIdx}/${timer.cycles}`;
-        const currentSet = timer.sets <= 1 ? '' : `Сет ${timer.setIdx + 1}/${timer.sets}`;
-
-        return [currentInterval, currentSet].filter(Boolean).join(' • ');
     }
 
     // Calculate current progress (0-1)
@@ -334,7 +302,7 @@ export default function TimerScreen() {
     };
 
     // Component returned
-    const phaseInfo = getPhaseInfo();
+    const phaseInfo = timerGetPhaseInfo();
 
     // Определяем текущее описание в зависимости от фазы
     const currentDescription = timer.phase === 'work' ? timer.descWork :
@@ -421,7 +389,7 @@ export default function TimerScreen() {
                 </View>
                 <TouchableOpacity
                     style={styles.startButton}
-                    onPress={() => router.push({
+                    onPress={() => router.replace({
                         pathname: '/timerWorkout',
                         params: {
                             prep: timer.prep,

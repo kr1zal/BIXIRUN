@@ -3,35 +3,15 @@ import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fetchProducts } from './products';
 import { useAppDispatch, useAppSelector } from './store/hooks';
+import { fetchProducts, ProductItem } from './store/slices/productsSlice';
 
 // Типы данных
-type ProductItem = {
-    id: string;
-    name: string;
-    price: string;
-    oldPrice?: string;
-    old_price?: string;
-    discount: number;
-    images?: string[];
-};
-
 type ArticleItem = {
     id: string;
     title: string;
     preview: string;
 };
-
-// Уменьшаем количество тестовых элементов
-const mockProducts: ProductItem[] = Array.from({ length: 30 }, (_, i) => ({
-    id: i + '',
-    name: `Product ${i + 1}`,
-    price: (Math.random() * 100).toFixed(2),
-    oldPrice: ((Math.random() * 100) + 50).toFixed(2),
-    discount: Math.floor(Math.random() * 70) + 10,
-    images: [],
-}));
 
 const mockArticles: ArticleItem[] = Array.from({ length: 5 }, (_, i) => ({
     id: i + '',
@@ -55,13 +35,18 @@ const ProductGridCard = memo(({ item, onPress }: { item: ProductItem; onPress: (
         if (item.images && item.images.length > 0) {
             return (
                 <View style={styles.imageContainer}>
-                    <Image source={{ uri: item.images[0] }} style={styles.productImage} resizeMode="contain" />
+                    <Image
+                        source={{ uri: item.images[0] }}
+                        style={styles.productImage}
+                        resizeMode="cover"
+                    />
                 </View>
             );
         } else {
             return <View style={styles.imagePlaceholder}></View>;
         }
     };
+
     return (
         <View style={styles.gridCard}>
             <TouchableOpacity style={{ flex: 1 }} onPress={onPress} activeOpacity={0.8}>
@@ -96,16 +81,21 @@ const ArticleCard = memo(({ item, onPress }: { item: ArticleItem; onPress: () =>
 
 export default function MainScreen() {
     const router = useRouter();
-    const [articles, setArticles] = useState<ArticleItem[]>([]);
     const dispatch = useAppDispatch();
-    const { items, status } = useAppSelector(state => state.products);
+    const [articles, setArticles] = useState<ArticleItem[]>([]);
+
+    // Подключаем Redux store для товаров
+    const { items: products, status, error } = useAppSelector(state => state.products);
 
     useEffect(() => {
         setArticles(mockArticles);
     }, []);
 
     useEffect(() => {
-        if (status === 'idle') dispatch(fetchProducts());
+        // Загружаем товары если они еще не загружены
+        if (status === 'idle') {
+            dispatch(fetchProducts());
+        }
     }, [dispatch, status]);
 
     const handleProductPress = useCallback((id: string) => {
@@ -177,11 +167,35 @@ export default function MainScreen() {
         </>
     );
 
+    // Показываем индикатор загрузки если товары загружаются
+    if (status === 'loading') {
+        return (
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' }}>
+                <Text>Загрузка товаров...</Text>
+            </SafeAreaView>
+        );
+    }
+
+    // Показываем ошибку если не удалось загрузить товары
+    if (status === 'failed') {
+        return (
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' }}>
+                <Text>Ошибка загрузки товаров: {error}</Text>
+                <TouchableOpacity
+                    style={{ marginTop: 10, padding: 10, backgroundColor: '#1976d2', borderRadius: 5 }}
+                    onPress={() => dispatch(fetchProducts())}
+                >
+                    <Text style={{ color: 'white' }}>Повторить</Text>
+                </TouchableOpacity>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
             <FlatList
                 ListHeaderComponent={ListHeader}
-                data={items}
+                data={products}
                 renderItem={renderProduct}
                 keyExtractor={item => item.id}
                 numColumns={2}

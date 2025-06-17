@@ -18,8 +18,11 @@ export const AppLayout = memo(({ children }: AppLayoutProps) => {
     const insets = useSafeAreaInsets();
     const pathname = usePathname();
 
-    // TabBar скрыт на workout-экране
-    const showTabBar = !pathname.startsWith('/timer/workout');
+    // TabBar скрыт только на workout-экране и auth/splash
+    const hideTabBarRoutes = ['/timerWorkout', '/auth', '/splash'];
+    const showTabBar = !hideTabBarRoutes.some(route => pathname === route);
+
+
 
     return (
         <Provider store={store}>
