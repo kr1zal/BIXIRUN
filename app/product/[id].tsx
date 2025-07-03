@@ -1,6 +1,7 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { RootState } from '../store';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { addToCart, removeFromCart, updateQuantity } from '../store/slices/cartSlice';
@@ -77,7 +78,7 @@ export default function ProductDetails() {
                 `${rawProduct.name} успешно добавлен в корзину`,
                 [
                     { text: "Продолжить покупки", style: "cancel" },
-                    { text: "Перейти в корзину", onPress: () => router.push('/cart') }
+                    { text: "Перейти в корзину", onPress: () => router.replace('/cart') }
                 ]
             );
         }, 800);
@@ -85,7 +86,7 @@ export default function ProductDetails() {
 
     // Обработчик перехода в корзину
     const handleGoToCart = useCallback(() => {
-        router.push('/cart');
+        router.replace('/cart');
     }, [router]);
 
     if (!rawProduct) {
@@ -96,12 +97,16 @@ export default function ProductDetails() {
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-            <Stack.Screen
-                options={{
-                    title: name,
-                    headerBackTitle: 'Назад'
-                }}
-            />
+            {/* Кнопка назад */}
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+                activeOpacity={0.7}
+            >
+                <Ionicons name="arrow-back" size={24} color="#1976d2" />
+                <Text style={styles.backText}>Назад</Text>
+            </TouchableOpacity>
+
             {/* Галерея изображений */}
             <View style={styles.galleryContainer}>
                 <ProductImageGallery images={images} />
@@ -241,5 +246,16 @@ const styles = StyleSheet.create({
     },
     thumbnailsContent: {
         paddingHorizontal: 4,
+    },
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+    },
+    backText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1976d2',
+        marginLeft: 8,
     },
 }); 

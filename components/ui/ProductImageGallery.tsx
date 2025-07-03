@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
-import { Animated, Dimensions, FlatList, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import OptimizedImage from './OptimizedImage';
 
 interface ProductImageGalleryProps {
     images: string[];
@@ -9,6 +10,7 @@ interface ProductImageGalleryProps {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const GALLERY_HEIGHT = SCREEN_WIDTH * (5 / 4); // Высота для формата 4:5
 const THUMB_SIZE = 48;
 const THUMB_SPACING = 8;
 const MINIATURES_HEIGHT = THUMB_SIZE + THUMB_SPACING * 2;
@@ -39,12 +41,13 @@ const ProductImageGallery = ({ images, initialIndex = 0 }: ProductImageGalleryPr
     };
 
     // Render main gallery item
-    const renderItem = ({ item }: { item: string }) => (
+    const renderItem = ({ item, index }: { item: string; index: number }) => (
         <View style={styles.imageContainer}>
-            <Image
+            <OptimizedImage
                 source={{ uri: item }}
                 style={styles.image}
-                resizeMode="contain"
+                contentFit="contain"
+                priority={index === activeIndex ? 'high' : 'normal'}
             />
         </View>
     );
@@ -96,7 +99,12 @@ const ProductImageGallery = ({ images, initialIndex = 0 }: ProductImageGalleryPr
                 activeIndex === index && styles.activeThumbnail
             ]}
         >
-            <Image source={{ uri: item }} style={styles.thumbnail} />
+            <OptimizedImage
+                source={{ uri: item }}
+                style={styles.thumbnail}
+                contentFit="cover"
+                priority="low"
+            />
         </TouchableOpacity>
     );
 
@@ -119,6 +127,10 @@ const ProductImageGallery = ({ images, initialIndex = 0 }: ProductImageGalleryPr
                     offset: SCREEN_WIDTH * index,
                     index,
                 })}
+                // Предзагрузка соседних изображений
+                initialNumToRender={3}
+                maxToRenderPerBatch={2}
+                windowSize={3}
             />
 
             {/* Navigation buttons */}
@@ -151,7 +163,7 @@ const ProductImageGallery = ({ images, initialIndex = 0 }: ProductImageGalleryPr
 const styles = StyleSheet.create({
     container: {
         width: SCREEN_WIDTH,
-        height: SCREEN_WIDTH + MINIATURES_HEIGHT,
+        height: GALLERY_HEIGHT + MINIATURES_HEIGHT,
         backgroundColor: '#fff',
         marginTop: 24,
         marginBottom: 0,
@@ -159,14 +171,16 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         width: SCREEN_WIDTH,
-        height: SCREEN_WIDTH,
+        height: GALLERY_HEIGHT,
         justifyContent: 'center',
         alignItems: 'center',
+        aspectRatio: 4 / 5, // Формат 4:5
     },
     image: {
         width: SCREEN_WIDTH,
-        height: SCREEN_WIDTH,
+        height: GALLERY_HEIGHT,
         backgroundColor: 'transparent',
+        aspectRatio: 4 / 5, // Формат 4:5
     },
     navButton: {
         position: 'absolute',
@@ -234,6 +248,7 @@ const styles = StyleSheet.create({
     thumbnail: {
         width: '100%',
         height: '100%',
+        aspectRatio: 9 / 16, // Миниатюры тоже в формате 9:16
     },
 });
 

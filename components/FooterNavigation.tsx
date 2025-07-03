@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import React, { memo, useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { selectCartItemsCount } from '../app/store/slices/cartSlice';
 
@@ -12,7 +13,7 @@ type TabPath = '/main' | '/products' | '/timer' | '/blog' | '/cart' | '/profile'
 // Define tab configuration
 const tabs = [
     { path: '/main' as TabPath, icon: 'home' as TabIconName, label: 'Главная', fallbackPaths: ['/'] },
-    { path: '/products' as TabPath, icon: 'pricetags' as TabIconName, label: 'Товары' },
+    { path: '/products' as TabPath, icon: 'pricetags' as TabIconName, label: 'Каталог' },
     { path: '/timer' as TabPath, icon: 'timer' as TabIconName, label: 'Таймер' },
     { path: '/blog' as TabPath, icon: 'book' as TabIconName, label: 'Блог' },
     { path: '/cart' as TabPath, icon: 'cart' as TabIconName, label: 'Корзина' },
@@ -61,11 +62,10 @@ const TabButton = memo(({ active, icon, label, onPress, badge }: TabButtonProps)
 export const FooterNavigation = memo(() => {
     const router = useRouter();
     const pathname = usePathname();
+    const insets = useSafeAreaInsets();
 
     // Получаем счетчик товаров из Redux
     const cartItemsCount = useSelector(selectCartItemsCount);
-
-
 
     // Check if a path is active
     const isActive = useCallback((tab: typeof tabs[0]) => {
@@ -85,7 +85,7 @@ export const FooterNavigation = memo(() => {
     }, [router]);
 
     return (
-        <View style={styles.footerBar}>
+        <View style={[styles.footerBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <View style={styles.footerRow}>
                 {tabs.map((tab) => (
                     <TabButton
@@ -111,9 +111,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderTopWidth: 1,
         borderTopColor: '#E0E0E0',
-        zIndex: 100,
-        elevation: 8,
-        paddingBottom: 12
+        zIndex: 9999,
+        elevation: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     footerRow: {
         flexDirection: 'row',

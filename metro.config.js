@@ -2,20 +2,20 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Добавляем полифилы для Node.js модулей
+// Необходимые полифилы для Supabase и WebSocket
 config.resolver.extraNodeModules = {
+    crypto: require.resolve('crypto-browserify'),
+    buffer: require.resolve('buffer'),
+    stream: require.resolve('readable-stream'),
     url: require.resolve('url/'),
-    fs: require.resolve('expo-file-system'),
+    process: require.resolve('process/browser'),
+    // Добавляем обратно для WebSocket
     http: require.resolve('stream-http'),
     https: require.resolve('https-browserify'),
     net: require.resolve('react-native-tcp'),
-    path: require.resolve('path-browserify'),
-    stream: require.resolve('readable-stream'),
+    tls: require.resolve('react-native-tcp'),
+    // Для WebSocket сжатия (permessage-deflate)
     zlib: require.resolve('browserify-zlib'),
-    crypto: require.resolve('crypto-browserify'),
-    buffer: require.resolve('buffer'),
-    tls: require.resolve('react-native-tcp'), // Use react-native-tcp as a TLS polyfill
-    assert: require.resolve('assert/'), // Add assert polyfill
 };
 
 module.exports = config; 

@@ -1,8 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
+import cartReducer, { saveCartToStorage } from './slices/cartSlice';
 import productsReducer from './slices/productsSlice';
-import cartReducer from './slices/cartSlice';
 import timerReducer from './slices/timerSlice';
-import { saveCartToStorage } from './slices/cartSlice';
 
 // Define the root reducer explicitly
 const rootReducer = {
@@ -11,23 +10,30 @@ const rootReducer = {
     cart: cartReducer
 };
 
-// Create a custom middleware for saving cart data
+// Дебаунс для сохранения корзины
+let saveCartTimeout: ReturnType<typeof setTimeout>;
+
+// Оптимизированный middleware для сохранения корзины с дебаунсом
 const saveCartMiddleware = (store: any) => (next: any) => (action: any) => {
-    // Perform the action
     const result = next(action);
 
-    // Check if this was a cart action
+    // Проверяем только cart actions, исключая загрузку и сохранение
     if (
         action.type.startsWith('cart/') &&
         !action.type.includes('loadFromStorage') &&
         !action.type.includes('saveToStorage')
     ) {
-        // Get the current cart state after the action has been processed
-        const state = store.getState();
-        const cartItems = state.cart.items;
+        // Очищаем предыдущий таймер
+        if (saveCartTimeout) {
+            clearTimeout(saveCartTimeout);
+        }
 
-        // Save the cart to AsyncStorage
-        store.dispatch(saveCartToStorage(cartItems));
+        // Устанавливаем новый таймер с дебаунсом 500мс
+        saveCartTimeout = setTimeout(() => {
+            const state = store.getState();
+            const cartItems = state.cart.items;
+            store.dispatch(saveCartToStorage(cartItems));
+        }, 500);
     }
 
     return result;
@@ -37,7 +43,13 @@ const saveCartMiddleware = (store: any) => (next: any) => (action: any) => {
 export const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat(saveCartMiddleware)
+        getDefaultMiddleware({
+            serializableCheck: {
+                // Игнорируем action types для сохранения корзины
+                ignoredActions: ['cart/saveToStorage'],
+            },
+        }).concat(saveCartMiddleware),
+    devTools: __DEV__, // Включаем DevTools только в режиме разработки
 });
 
 // Экспортируем типы для использования в приложении

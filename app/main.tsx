@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { memo, useCallback, useEffect, useState } from 'react';
-import { Dimensions, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ImagePreloader from '../components/ui/ImagePreloader';
+import OptimizedImage from '../components/ui/OptimizedImage';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { fetchProducts, ProductItem } from './store/slices/productsSlice';
 
@@ -22,9 +24,9 @@ const mockArticles: ArticleItem[] = Array.from({ length: 5 }, (_, i) => ({
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_MARGIN = 6;
 const GRID_COLUMN_COUNT = 2;
-const GRID_GAP = 8;
+const GRID_GAP = 3;
 const GRID_CARD_WIDTH = (SCREEN_WIDTH - GRID_GAP * 3) / 2;
-const GRID_CARD_HEIGHT = 230;
+const GRID_CARD_HEIGHT = GRID_CARD_WIDTH * (5 / 4) + 50;
 
 const TIMER_COVER_URL = 'https://wesrkttwjuvclvfkuxzx.supabase.co/storage/v1/object/public/images/Timer/MainTimer/main_timer.webp';
 
@@ -35,10 +37,13 @@ const ProductGridCard = memo(({ item, onPress }: { item: ProductItem; onPress: (
         if (item.images && item.images.length > 0) {
             return (
                 <View style={styles.imageContainer}>
-                    <Image
+                    <OptimizedImage
                         source={{ uri: item.images[0] }}
                         style={styles.productImage}
-                        resizeMode="cover"
+                        contentFit="cover"
+                        priority="normal"
+                        width={GRID_CARD_WIDTH}
+                        height={GRID_CARD_WIDTH * (5 / 4)}
                     />
                 </View>
             );
@@ -60,6 +65,7 @@ const ProductGridCard = memo(({ item, onPress }: { item: ProductItem; onPress: (
                 <View style={styles.priceRow}>
                     <Text style={styles.productPrice}>{item.price} ₽</Text>
                     {item.old_price && <Text style={styles.oldPrice}>{item.old_price} ₽</Text>}
+                    {item.price && item.old_price && item.discount && <Text style={styles.discountPrice}>-{Math.abs(item.discount)}%</Text>}
                 </View>
             </TouchableOpacity>
         </View>
@@ -86,6 +92,14 @@ export default function MainScreen() {
 
     // Подключаем Redux store для товаров
     const { items: products, status, error } = useAppSelector(state => state.products);
+
+    // Предзагрузка изображений для лучшей производительности
+    const imageUrls = useMemo(() => {
+        return products
+            .slice(0, 10) // Предзагружаем первые 10 изображений на главной
+            .map(item => item.images?.[0])
+            .filter(Boolean) as string[];
+    }, [products]);
 
     useEffect(() => {
         setArticles(mockArticles);
@@ -138,10 +152,13 @@ export default function MainScreen() {
                 onPress={handleTimerPress}
                 activeOpacity={0.85}
             >
-                <Image
+                <OptimizedImage
                     source={{ uri: TIMER_COVER_URL }}
                     style={styles.timerCoverImage}
-                    resizeMode="cover"
+                    contentFit="cover"
+                    priority="high"
+                    width={SCREEN_WIDTH - GRID_GAP * 2}
+                    height={540}
                 />
                 <View style={styles.bigTimerBtnInner}>
                     <Ionicons name="timer" size={48} color="#fff" style={{ marginRight: 18 }} />
@@ -156,7 +173,7 @@ export default function MainScreen() {
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 8, gap: 8 }}
+                contentContainerStyle={{ paddingHorizontal: GRID_GAP, gap: GRID_GAP }}
                 nestedScrollEnabled={false}
                 removeClippedSubviews={true}
                 initialNumToRender={3}
@@ -193,6 +210,9 @@ export default function MainScreen() {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+            {/* Предзагрузка изображений в фоне */}
+            <ImagePreloader urls={imageUrls} priority="low" />
+
             <FlatList
                 ListHeaderComponent={ListHeader}
                 data={products}
@@ -200,7 +220,7 @@ export default function MainScreen() {
                 keyExtractor={item => item.id}
                 numColumns={2}
                 contentContainerStyle={{ padding: GRID_GAP, paddingBottom: 100 }}
-                columnWrapperStyle={{ marginBottom: 0 }}
+                columnWrapperStyle={{ marginBottom: 0, gap: GRID_GAP }}
                 removeClippedSubviews={true}
                 initialNumToRender={5}
                 maxToRenderPerBatch={5}
@@ -220,7 +240,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#1976d2',
         marginTop: 16,
-        marginLeft: 16,
+        marginLeft: GRID_GAP * 2,
         marginBottom: 8
     },
     gridCard: {
@@ -229,7 +249,6 @@ const styles = StyleSheet.create({
         padding: 0,
         width: GRID_CARD_WIDTH,
         marginBottom: GRID_GAP,
-        marginRight: GRID_GAP,
         borderWidth: 1,
         borderColor: '#e0e0e0',
     },
@@ -249,7 +268,6 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         width: '100%',
-        height: 200,
         backgroundColor: '#fff',
         borderRadius: 8,
         alignItems: 'center',
@@ -257,6 +275,7 @@ const styles = StyleSheet.create({
         margin: 0,
         padding: 0,
         overflow: 'hidden',
+        aspectRatio: 4 / 5,
     },
     imagePlaceholder: {
         width: '100%',
@@ -288,11 +307,16 @@ const styles = StyleSheet.create({
         textDecorationLine: 'line-through',
         marginLeft: 6,
     },
+    discountPrice: {
+        fontSize: 12,
+        color: '#ff0055',
+        fontWeight: 'bold',
+        marginLeft: 6,
+    },
     productImage: {
         width: '100%',
         height: '100%',
         borderRadius: 8,
-        resizeMode: 'contain',
     },
     articleCard: {
         backgroundColor: '#fff',
@@ -342,8 +366,8 @@ const styles = StyleSheet.create({
     bigTimerBtn: {
         width: 'auto',
         alignSelf: 'stretch',
-        marginHorizontal: 3,
-        marginTop: 2,
+        marginHorizontal: GRID_GAP,
+        marginTop: GRID_GAP,
         marginBottom: 10,
         borderRadius: 22,
         overflow: 'hidden',
@@ -384,7 +408,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 8,
+        paddingHorizontal: GRID_GAP,
     },
     allArticlesBtn: {
         backgroundColor: '#1976d2',

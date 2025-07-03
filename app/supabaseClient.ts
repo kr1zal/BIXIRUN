@@ -13,6 +13,12 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         persistSession: true,
         detectSessionInUrl: false,
     },
+    realtime: {
+        params: {
+            // Отключаем сжатие WebSocket для избежания проблем с zlib
+            'per-message-deflate': false,
+        },
+    },
 });
 
 // Автоматическое обновление сессии при активации приложения
@@ -93,6 +99,7 @@ export type ProductData = {
     images?: string[];
     description?: string;
     specs?: Record<string, string>;
+    category?: string;
 };
 
 export async function getProducts(): Promise<ProductData[]> {

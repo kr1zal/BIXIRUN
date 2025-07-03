@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../app/store';
 import {
@@ -78,66 +78,75 @@ export default function CartScreen() {
     }, [dispatch]);
 
     return (
-        <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-            <View style={[styles.container, { paddingBottom: 32 }]}>
-                <Stack.Screen
-                    options={{
-                        title: 'Корзина',
-                        headerBackTitle: 'Назад',
-                        headerRight: !isCartEmpty ? () => (
-                            <TouchableOpacity
-                                onPress={handleClearCart}
-                                style={styles.clearButton}
-                            >
-                                <Ionicons name="trash-outline" size={18} color="#FF5252" />
-                                <Text style={styles.clearButtonText}>Очистить</Text>
-                            </TouchableOpacity>
-                        ) : undefined
-                    }}
-                />
-
-                {isCartEmpty ? (
-                    <EmptyCart onStartShopping={handleStartShopping} />
-                ) : (
-                    <>
-                        <FlatList
-                            data={cartItems}
-                            keyExtractor={(item) => item.product.id}
-                            renderItem={({ item }) => (
-                                <CartItem
-                                    item={item}
-                                    onRemove={handleRemoveItem}
-                                    onUpdateQuantity={handleUpdateQuantity}
-                                />
-                            )}
-                            contentContainerStyle={styles.listContent}
-                            showsVerticalScrollIndicator={false}
-                            ListFooterComponent={
-                                <CartSummary
-                                    subtotal={summaryData.subtotal}
-                                    shipping={summaryData.shipping}
-                                    tax={summaryData.tax}
-                                    total={summaryData.total}
-                                    itemCount={itemCount}
-                                    onCheckout={handleCheckout}
-                                />
-                            }
-                        />
-                    </>
+        <View style={[styles.container, { flex: 1, paddingTop: 50, paddingBottom: 80, position: 'relative' }]}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Корзина</Text>
+                {!isCartEmpty && (
+                    <TouchableOpacity
+                        onPress={handleClearCart}
+                        style={styles.clearButton}
+                    >
+                        <Ionicons name="trash-outline" size={18} color="#FF5252" />
+                        <Text style={styles.clearButtonText}>Очистить</Text>
+                    </TouchableOpacity>
                 )}
             </View>
-        </SafeAreaView>
+            {isCartEmpty ? (
+                <EmptyCart onStartShopping={handleStartShopping} />
+            ) : (
+                <>
+                    <FlatList
+                        data={cartItems}
+                        keyExtractor={(item) => item.product.id}
+                        renderItem={({ item }) => (
+                            <CartItem
+                                item={item}
+                                onRemove={handleRemoveItem}
+                                onUpdateQuantity={handleUpdateQuantity}
+                            />
+                        )}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        style={{ flex: 1 }}
+                        ListFooterComponent={
+                            <CartSummary
+                                subtotal={summaryData.subtotal}
+                                shipping={summaryData.shipping}
+                                tax={summaryData.tax}
+                                total={summaryData.total}
+                                itemCount={itemCount}
+                                onCheckout={handleCheckout}
+                            />
+                        }
+                    />
+                </>
+            )}
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: '#F5F5F5',
+        overflow: 'visible',
     },
     listContent: {
         padding: 16,
         paddingTop: 20,
+        paddingBottom: 100,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
     },
     clearButton: {
         flexDirection: 'row',
@@ -149,4 +158,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginLeft: 4,
     },
-}); 
+});
+

@@ -1,68 +1,69 @@
-import React, { useState, memo } from 'react';
-import { Image, ImageProps, View, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
+import React, { memo, useState } from 'react';
+import { PixelRatio, StyleSheet, View, ViewStyle } from 'react-native';
+import { getImageSizeForContainer, getOptimizedImageUrl } from '../../utils/imageUtils';
 
-interface OptimizedImageProps extends ImageProps {
-    fallbackColor?: string;
-    showLoading?: boolean;
+interface OptimizedImageProps {
+    source: { uri: string } | number;
+    style?: ViewStyle;
+    placeholder?: string;
+    contentFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
+    transition?: number;
+    priority?: 'low' | 'normal' | 'high';
+    width?: number;
+    height?: number;
 }
 
 /**
  * Optimized image component that:
- * 1. Handles loading states with placeholder
- * 2. Provides fallback on error
- * 3. Is memoized to prevent unnecessary re-renders
+ * 1. Uses expo-image for better performance and caching
+ * 2. Handles loading states with placeholder
+ * 3. Provides fallback on error
+ * 4. Is memoized to prevent unnecessary re-renders
+ * 5. Supports priority loading for critical images
+ * 6. Automatically optimizes image sizes for better performance
  */
 const OptimizedImage = memo(({
     source,
     style,
-    resizeMode = 'cover',
-    fallbackColor = '#f0f0f0',
-    showLoading = true,
-    ...props
+    placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTRweCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmc8L3RleHQ+PC9zdmc+',
+    contentFit = 'cover',
+    transition = 200,
+    priority = 'normal',
+    width,
+    height
 }: OptimizedImageProps) => {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
 
-    const handleLoad = () => setLoading(false);
-    const handleError = () => {
-        setLoading(false);
-        setError(true);
-    };
+    // Optimize image URL if dimensions are provided
+    const optimizedSource = React.useMemo(() => {
+        if (typeof source === 'object' && source.uri && width && height) {
+            const pixelRatio = PixelRatio.get();
+            const targetSize = getImageSizeForContainer(width, height, pixelRatio);
+            const optimizedUrl = getOptimizedImageUrl(source.uri, targetSize);
+            return { uri: optimizedUrl };
+        }
+        return source;
+    }, [source, width, height]);
 
     return (
         <View style={[styles.container, style]}>
-            {/* Fallback/placeholder */}
-            <View
-                style={[
-                    StyleSheet.absoluteFill,
-                    { backgroundColor: fallbackColor }
-                ]}
+            <Image
+                source={hasError ? { uri: placeholder } : optimizedSource}
+                style={styles.image}
+                contentFit={contentFit}
+                transition={transition}
+                onLoad={() => setIsLoading(false)}
+                onError={() => {
+                    setHasError(true);
+                    setIsLoading(false);
+                }}
+                cachePolicy="memory-disk"
+                priority={priority}
+                placeholder={placeholder}
+                recyclingKey={typeof optimizedSource === 'object' ? optimizedSource.uri : String(optimizedSource)}
             />
-
-            {/* Loading indicator */}
-            {loading && showLoading && (
-                <ActivityIndicator
-                    style={StyleSheet.absoluteFill}
-                    color="#1976d2"
-                    size="small"
-                />
-            )}
-
-            {/* Actual image */}
-            {!error && (
-                <Image
-                    source={source}
-                    style={[
-                        StyleSheet.absoluteFill,
-                        styles.image,
-                        { opacity: loading ? 0 : 1 }
-                    ]}
-                    resizeMode={resizeMode}
-                    onLoad={handleLoad}
-                    onError={handleError}
-                    {...props}
-                />
-            )}
         </View>
     );
 });
@@ -70,7 +71,6 @@ const OptimizedImage = memo(({
 const styles = StyleSheet.create({
     container: {
         overflow: 'hidden',
-        backgroundColor: 'transparent',
     },
     image: {
         width: '100%',

@@ -12,11 +12,10 @@ const CartInitializer: React.FC = () => {
     const dispatch = useDispatch<AppDispatch>();
 
     useEffect(() => {
-        // Загрузка корзины при монтировании компонента
-        dispatch(loadCartFromStorage());
-
-        // Выводим сообщение в консоль для отладки
-        console.log('CartInitializer: Attempting to load cart from storage');
+        const loadCart = async () => {
+            await dispatch(loadCartFromStorage());
+        };
+        loadCart();
     }, [dispatch]);
 
     // Компонент не отображает ничего в UI

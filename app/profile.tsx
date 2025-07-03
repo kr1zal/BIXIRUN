@@ -8,7 +8,6 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Image,
     Platform,
     ScrollView,
     StyleSheet,
@@ -19,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
+import OptimizedImage from '../components/ui/OptimizedImage';
 import { RootState } from './store';
 
 // Supabase
@@ -594,7 +594,12 @@ export default function ProfileScreen() {
                         <View style={styles.userInfoCard}>
                             <TouchableOpacity onPress={pickImage} style={styles.photoContainer}>
                                 {profileImage ? (
-                                    <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                                    <OptimizedImage
+                                        source={{ uri: profileImage }}
+                                        style={styles.profileImage}
+                                        contentFit="cover"
+                                        priority="high"
+                                    />
                                 ) : (
                                     <Ionicons name="person-circle" size={80} color="#2196f3" />
                                 )}
@@ -655,9 +660,14 @@ export default function ProfileScreen() {
                                 contentContainerStyle={styles.recentProductsContainer}
                             >
                                 {recentProducts.map((item) => (
-                                    <TouchableOpacity key={item.id} style={styles.recentProductCard} onPress={() => router.push(`/product/${item.id}`)}>
+                                    <TouchableOpacity key={item.id} style={styles.recentProductCard} onPress={() => router.replace(`/product/${item.id}`)}>
                                         {item.images && item.images[0] ? (
-                                            <Image source={{ uri: item.images[0] }} style={styles.productImagePlaceholder} />
+                                            <OptimizedImage
+                                                source={{ uri: item.images[0] }}
+                                                style={styles.productImagePlaceholder}
+                                                contentFit="cover"
+                                                priority="low"
+                                            />
                                         ) : (
                                             <View style={styles.productImagePlaceholder} />
                                         )}

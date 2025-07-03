@@ -10,7 +10,12 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.BIXIRUN"
+      "bundleIdentifier": "com.anonymous.BIXIRUN",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Приложение использует камеру для записи тренировок",
+        "NSMicrophoneUsageDescription": "Приложение использует микрофон для записи звука во время тренировок",
+        "NSPhotoLibraryUsageDescription": "Приложение сохраняет видео тренировок в галерею"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +23,13 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.BIXIRUN"
+      "package": "com.anonymous.BIXIRUN",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,7 +47,24 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "react-native-vision-camera"
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Приложение использует камеру для записи тренировок",
+          "microphonePermission": "Приложение использует микрофон для записи звука во время тренировок",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Приложение сохраняет видео тренировок в галерею",
+          "savePhotosPermission": "Приложение сохраняет видео тренировок в галерею",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
+      "expo-audio",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

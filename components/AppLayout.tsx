@@ -1,7 +1,7 @@
 import { store } from '@/app/store';
 import { usePathname } from 'expo-router';
 import React, { memo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
@@ -18,19 +18,15 @@ export const AppLayout = memo(({ children }: AppLayoutProps) => {
     const insets = useSafeAreaInsets();
     const pathname = usePathname();
 
-    // TabBar скрыт только на workout-экране и auth/splash
+    // TabBar скрыт на специальных страницах
     const hideTabBarRoutes = ['/timerWorkout', '/auth', '/splash'];
-    const showTabBar = !hideTabBarRoutes.some(route => pathname === route);
-
-
+    const showTabBar = !hideTabBarRoutes.includes(pathname);
 
     return (
         <Provider store={store}>
             <AuthProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                     <View style={styles.container}>
-                        {/* DEBUG: выводим pathname поверх всего */}
-                        <Text style={{ position: 'absolute', top: 2, right: 2, zIndex: 9999, fontSize: 10, color: '#888' }}>{pathname}</Text>
                         <CartInitializer />
                         {children}
                         {showTabBar && <FooterNavigation />}
