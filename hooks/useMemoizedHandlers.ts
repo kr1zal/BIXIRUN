@@ -1,27 +1,77 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 /**
- * A hook that memoizes a collection of handler functions
- * to prevent unnecessary re-renders.
- * 
- * @param handlers - An object containing handler functions
- * @param deps - Dependencies array that should trigger handler regeneration
- * @returns An object with memoized versions of all handlers
+ * Hook для мемоизации обработчиков событий
  */
 export function useMemoizedHandlers<T extends Record<string, (...args: any[]) => any>>(
-    handlers: T,
-    deps: React.DependencyList = []
+    handlers: T
 ): T {
-    const memoizedHandlers = {} as T;
-
-    // Create memoized versions of each handler
-    Object.keys(handlers).forEach(key => {
-        const handler = handlers[key];
-        // @ts-ignore - We know key exists in T
-        memoizedHandlers[key] = useCallback((...args: any[]) => {
-            return handler(...args);
-        }, [...deps]);
-    });
+    const memoizedHandlers = useMemo(() => {
+        const result = {} as T;
+        for (const [key, handler] of Object.entries(handlers)) {
+            result[key as keyof T] = handler as T[keyof T]; // ✅ Убираем лишний useCallback
+        }
+        return result;
+    }, [handlers]);
 
     return memoizedHandlers;
+}
+
+/**
+ * Hook для дебаунса функций - предотвращает избыточные вызовы
+ */
+export function useDebounce<T extends (...args: any[]) => any>(
+    callback: T,
+    delay: number
+): T {
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const debouncedCallback = useCallback(
+        (...args: Parameters<T>) => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+
+            timeoutRef.current = setTimeout(() => {
+                callback(...args);
+            }, delay);
+        },
+        [callback, delay]
+    ) as T;
+
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
+
+    return debouncedCallback;
+}
+
+/**
+ * Hook для оптимизации производительности галереи в карточках товаров
+ */
+export function useOptimizedGallery(itemId: string) {
+    // ✅ Мемоизированный keyExtractor для галереи
+    const galleryKeyExtractor = useCallback(
+        (_: string, index: number) => `gallery-${itemId}-${index}`,
+        [itemId]
+    );
+
+    // ✅ Оптимизированные настройки для FlatList галереи
+    const galleryOptimization = useMemo(() => ({
+        initialNumToRender: 1,
+        maxToRenderPerBatch: 1,
+        windowSize: 3,
+        removeClippedSubviews: true,
+        scrollEventThrottle: 16,
+        decelerationRate: "fast" as const,
+    }), []);
+
+    return {
+        galleryKeyExtractor,
+        galleryOptimization,
+    };
 } 

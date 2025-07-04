@@ -1,4 +1,4 @@
-import { Middleware, AnyAction } from 'redux';
+import { AnyAction, Middleware } from 'redux';
 import { RootState } from '../index';
 import { saveCartToStorage } from '../slices/cartSlice';
 

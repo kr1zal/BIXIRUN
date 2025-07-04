@@ -39,8 +39,8 @@ const TabButton = memo(({ active, icon, label, onPress, badge }: TabButtonProps)
             <View style={styles.iconContainer}>
                 <Ionicons
                     name={icon}
-                    size={20}
-                    color={active ? "#F33" : "#333"}
+                    size={24}
+                    color={active ? "#000" : "#666"}
                 />
                 {badge ? (
                     <View style={styles.badge}>
@@ -50,11 +50,7 @@ const TabButton = memo(({ active, icon, label, onPress, badge }: TabButtonProps)
                     </View>
                 ) : null}
             </View>
-            <Text style={[styles.tabLabel, active && styles.activeTabLabel]}>
-                {label}
-            </Text>
         </View>
-        {active && <View style={styles.activeIndicator} />}
     </TouchableOpacity>
 ));
 
@@ -122,14 +118,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-around',
-        paddingTop: 8,
-        paddingBottom: 0
+        paddingVertical: 12,
     },
     footerBtn: {
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative',
-        paddingBottom: 2
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
     tabContent: {
         alignItems: 'center',
@@ -137,22 +132,6 @@ const styles = StyleSheet.create({
     },
     iconContainer: {
         position: 'relative',
-        marginBottom: 3
-    },
-    tabLabel: {
-        fontSize: 10,
-        color: '#333333'
-    },
-    activeTabLabel: {
-        color: '#F33',
-        fontWeight: 'bold'
-    },
-    activeIndicator: {
-        position: 'absolute',
-        bottom: -2,
-        width: '100%',
-        height: 2,
-        backgroundColor: '#F33'
     },
     badge: {
         position: 'absolute',

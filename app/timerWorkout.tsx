@@ -213,20 +213,20 @@ export default function TimerWorkout() {
 
     // 1. Кнопка СТАРТ/СТОП - АВТОМАТИЧЕСКАЯ запись видео с таймером
     const handleStartStop = useCallback(async () => {
-        // Проверяем нативный модуль
-        if (!checkNativeModule()) {
-            Alert.alert(
-                'Функция в разработке',
-                'Нативный модуль записи видео с таймером еще не готов.\n\nВременно используйте запись экрана:\n1. Откройте Пункт управления\n2. Нажмите кнопку записи экрана 🔴\n3. Вернитесь в приложение и запустите таймер',
-                [{ text: 'Понятно' }]
-            );
-            return;
-        }
-
         if (!isRecording) {
             // СТАРТ - автоматическая запись с нативным модулем
             try {
                 console.log('🎬 СТАРТ: Автоматическая запись видео с таймером');
+
+                // Проверяем разрешения
+                if (!hasCameraPermission || !hasMicrophonePermission) {
+                    Alert.alert(
+                        'Нужны разрешения',
+                        'Для записи видео с таймером нужны разрешения на камеру и микрофон. Перейдите в настройки приложения и предоставьте разрешения.',
+                        [{ text: 'OK' }]
+                    );
+                    return;
+                }
 
                 const phaseInfo = getPhaseInfo();
                 const config = {
@@ -237,53 +237,57 @@ export default function TimerWorkout() {
                     fontColor: '#ffffff',
                     backgroundColor: 'rgba(0,0,0,0.8)',
                     borderRadius: 10,
-                    position: 'bottom-center' as const
+                    position: 'bottom-center' as const,
+                    // ИСПРАВЛЕНИЕ: Передаем выбранную камеру в нативный модуль
+                    cameraPosition: facing,
+                    videoOrientation: 'portrait' as const
                 };
 
-                // Запускаем нативную запись видео с таймером
-                await TimerVideoRecorder.startRecording(config);
+                // Запускаем нативную запись видео
+                const result = await TimerVideoRecorder.startRecording(config);
+                console.log('✅ Запись началась:', result);
+
+                setIsRecording(true);
 
                 // Запускаем таймер
                 dispatch(startTimer());
-                setIsRecording(true);
-                setIsPaused(false);
-                setRecordingStartTime(Date.now());
 
-                console.log('✅ Автоматическая запись началась!');
+                Alert.alert('Запись началась', 'Видео с таймером записывается автоматически!');
 
             } catch (error) {
                 console.error('❌ Ошибка запуска записи:', error);
-                Alert.alert('Ошибка', 'Не удалось начать запись видео');
+                Alert.alert('Ошибка', `Не удалось начать запись: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
             }
         } else {
-            // СТОП - автоматическое сохранение
+            // СТОП - автоматическое сохранение видео
             try {
                 console.log('⏹️ СТОП: Автоматическое сохранение видео');
 
-                // Останавливаем нативную запись
-                const videoPath = await TimerVideoRecorder.stopRecording();
-
                 // Останавливаем таймер
                 dispatch(pauseTimer());
+
+                // Останавливаем нативную запись
+                const result = await TimerVideoRecorder.stopRecording();
+                console.log('✅ Видео автоматически сохранено:', result);
+
                 setIsRecording(false);
-                setIsPaused(false);
 
-                const recordingDuration = Math.floor((Date.now() - recordingStartTime) / 1000);
-                Alert.alert(
-                    'Видео сохранено! 🎉',
-                    `Запись ${formatTime(recordingDuration)} с таймером сохранена в галерею!\n\n📱 ${videoPath}`,
-                    [{ text: 'Отлично!' }]
-                );
-
-                console.log('✅ Видео автоматически сохранено:', videoPath);
+                // ИСПРАВЛЕНИЕ: Правильная обработка результата
+                if (result.status === 'success') {
+                    Alert.alert('Готово!', 'Видео с таймером сохранено в галерею!');
+                } else if (result.status === 'saved_locally') {
+                    Alert.alert('Готово!', 'Видео сохранено локально (не удалось добавить в галерею)');
+                } else {
+                    Alert.alert('Готово!', 'Видео записано');
+                }
 
             } catch (error) {
-                console.error('❌ Ошибка остановки записи:', error);
-                Alert.alert('Ошибка', 'Не удалось сохранить видео');
+                console.error('❌ Ошибка сохранения видео:', error);
+                Alert.alert('Ошибка', `Не удалось сохранить видео: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
                 setIsRecording(false);
             }
         }
-    }, [isRecording, dispatch, timerState, recordingStartTime, formatTime, getPhaseInfo]);
+    }, [isRecording, timerState, dispatch, startTimer, getPhaseInfo]);
 
     // 2. Кнопка ПАУЗА/ДАЛЕЕ - только для таймера
     const handlePauseResume = useCallback(async () => {
@@ -379,6 +383,27 @@ export default function TimerWorkout() {
         }
     }, [isRecording, timerState.seconds, timerState.phase, timerState.intervalIdx, timerState.cycles, timerState.setIdx, formatTime, getPhaseInfo]);
 
+    // Переключение камеры
+    const handleCameraFlip = useCallback(async () => {
+        try {
+            const newFacing = facing === 'front' ? 'back' : 'front';
+            console.log('🔄 Переключаем камеру с', facing, 'на', newFacing);
+
+            // Если записываем - переключаем через нативный модуль
+            if (isRecording && checkNativeModule()) {
+                const result = await TimerVideoRecorder.switchCamera(newFacing);
+                console.log('✅ Камера переключена в нативном модуле:', result);
+            }
+
+            // Обновляем состояние для UI
+            setFacing(newFacing);
+
+        } catch (error: any) {
+            console.error('❌ Ошибка переключения камеры:', error);
+            Alert.alert('Ошибка', 'Не удалось переключить камеру');
+        }
+    }, [facing, isRecording]);
+
     // Проверка разрешений
     if (!hasCameraPermission) {
         return (
@@ -426,16 +451,6 @@ export default function TimerWorkout() {
                     <Text style={styles.topButtonText}>🏠</Text>
                 </TouchableOpacity>
             </View>
-
-            {/* Сообщение о записи */}
-            {isRecording && (
-                <View style={styles.recordingInfo}>
-                    <Text style={styles.recordingInfoText}>
-                        🎬 Таймер активен{'\n'}
-                        📱 Запустите запись экрана в Пункте управления
-                    </Text>
-                </View>
-            )}
 
             {/* Индикатор записи */}
             {isRecording && (
@@ -599,22 +614,6 @@ const styles = StyleSheet.create({
         textShadowColor: 'rgba(0, 0, 0, 0.8)',
         textShadowOffset: { width: 1, height: 1 },
         textShadowRadius: 3,
-    },
-    recordingInfo: {
-        position: 'absolute',
-        top: 120,
-        left: 20,
-        right: 20,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        padding: 12,
-        borderRadius: 10,
-        zIndex: 5,
-    },
-    recordingInfoText: {
-        color: '#fff',
-        fontSize: 13,
-        textAlign: 'center',
-        fontWeight: '500',
     },
     recordingIndicator: {
         position: 'absolute',

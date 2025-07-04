@@ -1,6 +1,6 @@
-import React from 'react';
-import { Stack } from 'expo-router';
 import { AppLayout } from '@/components/AppLayout';
+import { Stack } from 'expo-router';
+import React from 'react';
 
 export default function RootLayout() {
   return (

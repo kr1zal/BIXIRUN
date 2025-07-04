@@ -63,9 +63,10 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }: CartItemProps) => {
                 {/* Изображение товара */}
                 <View style={styles.imageContainer}>
                     <OptimizedImage
-                        source={product.images && product.images[0] ? { uri: product.images[0] } : { uri: `https://placehold.co/100x100/png?text=${product.id}` }}
+                        source={{ uri: item.product.images?.[0] || '' }}
                         style={styles.image}
-                        showLoading={true}
+                        contentFit="cover"
+                        priority="normal"
                     />
                 </View>
 

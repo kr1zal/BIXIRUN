@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { createSelector } from '@reduxjs/toolkit';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { Dimensions, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -26,78 +27,115 @@ type CardProps = {
     onPress: () => void;
 };
 
-// Удален неиспользуемый компонент QuantityCounter
-
-const QuantityCartButton = ({ quantity, onIncrement, onDecrement }: { quantity: number, onIncrement: () => void, onDecrement: () => void }) => {
-    const router = useRouter();
-    return (
-        <View style={styles.cartRow}>
-            <TouchableOpacity onPress={() => router.replace('/cart')} style={styles.cartSquare}>
-                <Ionicons name="cart" size={20} color="#1976d2" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onDecrement} style={styles.cartSquare}>
-                <Text style={styles.counterBtnText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.cartQuantity}>{quantity}</Text>
-            <TouchableOpacity onPress={onIncrement} style={styles.cartSquare}>
-                <Text style={styles.counterBtnText}>+</Text>
-            </TouchableOpacity>
-        </View>
+// ✅ МЕМОИЗИРОВАННЫЙ СЕЛЕКТОР ДЛЯ КОРЗИНЫ
+const makeSelectCartItem = () =>
+    createSelector(
+        [(state: RootState) => state.cart.items, (state: RootState, productId: string) => productId],
+        (cartItems, productId) => cartItems.find(item => item.product.id === productId)
     );
+
+// ✅ КЭШИРУЕМ СЕЛЕКТОРЫ ДЛЯ КАЖДОГО ТОВАРА
+const cartSelectors = new Map<string, ReturnType<typeof makeSelectCartItem>>();
+
+const getCartItemSelector = (productId: string) => {
+    if (!cartSelectors.has(productId)) {
+        cartSelectors.set(productId, makeSelectCartItem());
+    }
+    return cartSelectors.get(productId)!;
 };
 
-// Memoized grid item component
-const GridItem = React.memo(({ item, onPress }: CardProps) => {
-    const dispatch = useAppDispatch();
-    const cartItems = useAppSelector((state: RootState) => state.cart.items);
-    const cartItem = cartItems.find(i => i.product.id === item.id);
-    const quantity = cartItem?.quantity || 0;
+// Удален неиспользуемый компонент QuantityCounter
 
-    // Состояние для отслеживания активного изображения
-    const [activeImageIndex, setActiveImageIndex] = React.useState(0);
+
+
+// ✅ МЕМОИЗИРОВАННЫЙ КОМПОНЕНТ ГАЛЕРЕИ ИЗОБРАЖЕНИЙ
+const GalleryImage = React.memo(({ imageUrl, isActive }: { imageUrl: string; isActive: boolean }) => (
+    <View style={styles.galleryImageContainer}>
+        <OptimizedImage
+            source={{ uri: imageUrl }}
+            style={styles.galleryImage}
+            contentFit="cover"
+            priority={isActive ? 'high' : 'normal'}
+        />
+    </View>
+), (prevProps, nextProps) => {
+    return prevProps.imageUrl === nextProps.imageUrl && prevProps.isActive === nextProps.isActive;
+});
+GalleryImage.displayName = 'GalleryImage';
+
+// ✅ МЕМОИЗИРОВАННЫЙ КОМПОНЕНТ ПАГИНАЦИИ
+const PaginationDots = React.memo(({ images, activeIndex }: { images: string[]; activeIndex: number }) => {
+    if (!images || images.length <= 1) return null;
+
+    return (
+        <View style={styles.pagination}>
+            {images.map((_, index) => (
+                <View
+                    key={index}
+                    style={[
+                        styles.paginationDot,
+                        activeIndex === index && styles.activePaginationDot
+                    ]}
+                />
+            ))}
+        </View>
+    );
+}, (prevProps, nextProps) => {
+    return prevProps.activeIndex === nextProps.activeIndex && prevProps.images.length === nextProps.images.length;
+});
+PaginationDots.displayName = 'PaginationDots';
+
+// ✅ МЕМОИЗИРОВАННЫЙ КОМПОНЕНТ ГАЛЕРЕИ
+const ProductGallery = React.memo(({
+    images,
+    activeIndex,
+    onIndexChange,
+    onPress
+}: {
+    images: string[];
+    activeIndex: number;
+    onIndexChange: (index: number) => void;
+    onPress: () => void;
+}) => {
     const flatListRef = React.useRef<FlatList>(null);
 
-    // Обработчик скролла изображений
-    const handleImageScroll = React.useCallback((event: any) => {
+    // ✅ ОПТИМИЗИРОВАННЫЙ обработчик скролла изображений
+    const handleImageScroll = useCallback((event: any) => {
         const newIndex = Math.round(event.nativeEvent.contentOffset.x / GRID_CARD_WIDTH);
-        setActiveImageIndex(newIndex);
-    }, []);
+        if (newIndex !== activeIndex && newIndex >= 0 && newIndex < images.length) {
+            onIndexChange(newIndex);
+        }
+    }, [activeIndex, onIndexChange, images.length]);
 
-    // Рендер одного изображения в галерее
-    const renderGalleryImage = React.useCallback(({ item: imageUrl }: { item: string }) => (
-        <View style={styles.galleryImageContainer}>
-            <OptimizedImage
-                source={{ uri: imageUrl }}
-                style={styles.galleryImage}
-                contentFit="cover"
-            />
-        </View>
-    ), []);
+    // ✅ НОВЫЙ: Обработчик для плавного обновления во время скролла
+    const handleScrollProgress = useCallback((event: any) => {
+        const offsetX = event.nativeEvent.contentOffset.x;
+        const newIndex = Math.round(offsetX / GRID_CARD_WIDTH);
+        if (newIndex !== activeIndex && newIndex >= 0 && newIndex < images.length) {
+            onIndexChange(newIndex);
+        }
+    }, [activeIndex, onIndexChange, images.length]);
 
-    // Рендер пагинации (точек)
-    const renderPagination = React.useCallback(() => {
-        if (!item.images || item.images.length <= 1) return null;
+    // ✅ ОПТИМИЗИРОВАННЫЙ рендер одного изображения в галерее
+    const renderGalleryImage = useCallback(({ item: imageUrl, index }: { item: string; index: number }) => (
+        <GalleryImage imageUrl={imageUrl} isActive={index === activeIndex} />
+    ), [activeIndex]);
 
-        return (
-            <View style={styles.pagination}>
-                {item.images.map((_, index) => (
-                    <View
-                        key={index}
-                        style={[
-                            styles.paginationDot,
-                            activeImageIndex === index && styles.activePaginationDot
-                        ]}
-                    />
-                ))}
-            </View>
-        );
-    }, [item.images, activeImageIndex]);
+    // ✅ ОПТИМИЗИРОВАННЫЙ keyExtractor для галереи
+    const galleryKeyExtractor = useCallback((_: string, index: number) => `gallery-img-${index}`, []);
 
-    // Создаем жесты для одновременной работы тапа и свайпа
+    // ✅ ОПТИМИЗИРОВАННЫЙ getItemLayout для галереи
+    const galleryGetItemLayout = useCallback((_: any, index: number) => ({
+        length: GRID_CARD_WIDTH,
+        offset: GRID_CARD_WIDTH * index,
+        index,
+    }), []);
+
+    // ✅ Создаем жесты для одновременной работы тапа и свайпа
     const tapGesture = React.useMemo(() =>
         Gesture.Tap()
-            .maxDuration(250)
-            .maxDistance(10)
+            .maxDuration(200)          // Уменьшаем время для быстрого тапа
+            .maxDistance(5)            // Уменьшаем дистанцию для точного тапа
             .runOnJS(true)
             .onEnd((_event, success) => {
                 if (success) {
@@ -106,40 +144,50 @@ const GridItem = React.memo(({ item, onPress }: CardProps) => {
             })
         , [onPress]);
 
-    // Создаем Pan жест для FlatList свайпа
+    // ✅ ИСПРАВЛЕНО: Настраиваем Pan жест для работы с snapToInterval
     const panGesture = React.useMemo(() =>
         Gesture.Pan()
-            .activeOffsetX([-10, 10])
-            .failOffsetY([-10, 10])
+            .activeOffsetX([-15, 15])  // Увеличиваем порог для активации
+            .failOffsetY([-15, 15])    // Увеличиваем порог для отмены
+            .minDistance(10)           // Минимальная дистанция для активации
         , []);
 
-    // Комбинируем жесты
+    // ✅ ИСПРАВЛЕНО: Возвращаем Simultaneous с правильными настройками
     const composedGesture = React.useMemo(() =>
         Gesture.Simultaneous(tapGesture, panGesture)
         , [tapGesture, panGesture]);
 
     return (
-        <View style={styles.gridCard}>
-            {/* Галерея изображений с GestureDetector для одновременной работы тапа и свайпа */}
+        <>
             <GestureDetector gesture={composedGesture}>
                 <View style={styles.imageContainer}>
-                    {item.images && item.images.length > 0 ? (
+                    {images && images.length > 0 ? (
                         <View style={styles.galleryContainer}>
                             <FlatList
                                 ref={flatListRef}
-                                data={item.images}
+                                data={images}
                                 renderItem={renderGalleryImage}
-                                keyExtractor={(_, index) => `image-${index}`}
+                                keyExtractor={galleryKeyExtractor}
                                 horizontal
-                                pagingEnabled
+                                // ✅ ИСПРАВЛЕНО: Заменяем pagingEnabled на snapToInterval для точной фиксации
+                                snapToInterval={GRID_CARD_WIDTH}
+                                snapToAlignment="start"
+                                disableIntervalMomentum={true}
+                                decelerationRate="fast"
                                 showsHorizontalScrollIndicator={false}
                                 onMomentumScrollEnd={handleImageScroll}
-                                style={styles.galleryFlatList}
-                                getItemLayout={(_, index) => ({
-                                    length: GRID_CARD_WIDTH,
-                                    offset: GRID_CARD_WIDTH * index,
-                                    index,
-                                })}
+                                onScroll={handleScrollProgress}
+                                getItemLayout={galleryGetItemLayout}
+                                // ✅ КРИТИЧЕСКИЕ ОПТИМИЗАЦИИ ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ
+                                initialNumToRender={1}
+                                maxToRenderPerBatch={1}
+                                windowSize={3}
+                                removeClippedSubviews={true}
+                                scrollEventThrottle={16}
+                                // ✅ ДОПОЛНИТЕЛЬНЫЕ ОПТИМИЗАЦИИ ДЛЯ ГАЛЕРЕИ
+                                bounces={false}
+                                overScrollMode="never"
+                                nestedScrollEnabled={false}
                             />
                         </View>
                     ) : (
@@ -148,33 +196,160 @@ const GridItem = React.memo(({ item, onPress }: CardProps) => {
                 </View>
             </GestureDetector>
 
-            {/* Пагинация под картинкой */}
-            {renderPagination()}
+            {/* ✅ Пагинация под картинкой */}
+            <PaginationDots images={images} activeIndex={activeIndex} />
+        </>
+    );
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.activeIndex === nextProps.activeIndex &&
+        prevProps.images.length === nextProps.images.length &&
+        prevProps.onPress === nextProps.onPress &&
+        prevProps.onIndexChange === nextProps.onIndexChange
+    );
+});
+ProductGallery.displayName = 'ProductGallery';
+
+// ✅ МЕМОИЗИРОВАННЫЙ КОМПОНЕНТ ИНФОРМАЦИИ О ТОВАРЕ
+const ProductInfo = React.memo(({ item, onPress }: { item: ProductItem; onPress: () => void }) => (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.textSection}>
+        <View style={styles.priceRow}>
+            <Text style={styles.productPrice}>{item.price} ₽</Text>
+            {item.old_price && <Text style={styles.oldPrice}>{item.old_price} ₽</Text>}
+            {item.price && item.old_price && item.discount && <Text style={styles.discountPrice}>-{Math.abs(item.discount)}%</Text>}
+        </View>
+        <Text style={styles.productName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+    </TouchableOpacity>
+), (prevProps, nextProps) => {
+    return (
+        prevProps.item.id === nextProps.item.id &&
+        prevProps.item.price === nextProps.item.price &&
+        prevProps.item.name === nextProps.item.name &&
+        prevProps.item.old_price === nextProps.item.old_price &&
+        prevProps.item.discount === nextProps.item.discount &&
+        prevProps.onPress === nextProps.onPress
+    );
+});
+ProductInfo.displayName = 'ProductInfo';
+
+// ✅ МЕМОИЗИРОВАННЫЙ КОМПОНЕНТ КНОПОК КОРЗИНЫ
+const CartButtons = React.memo(({
+    quantity,
+    onIncrement,
+    onDecrement,
+    onAddToCart
+}: {
+    quantity: number;
+    onIncrement: () => void;
+    onDecrement: () => void;
+    onAddToCart: () => void;
+}) => {
+    const router = useRouter();
+
+    // ✅ Мемоизированный callback для перехода в корзину
+    const handleCartPress = useCallback(() => {
+        router.replace('/cart');
+    }, [router]);
+
+    if (quantity > 0) {
+        return (
+            <View style={styles.cartButtonContainer}>
+                <TouchableOpacity onPress={onDecrement} style={styles.quantityButtonMinus}>
+                    <Text style={styles.quantityButtonText}>-</Text>
+                </TouchableOpacity>
+                <Text style={styles.quantityDisplay}>{quantity}</Text>
+                <TouchableOpacity onPress={onIncrement} style={styles.quantityButton}>
+                    <Text style={styles.quantityButtonText}>+</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleCartPress} style={styles.cartIconButtonRight}>
+                    <Ionicons name="cart" size={18} color="#1976d2" />
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    return (
+        <TouchableOpacity style={styles.addToCartBtn} onPress={onAddToCart} activeOpacity={0.85}>
+            <Ionicons name="cart" size={18} color="#fff" />
+            <Text style={styles.addToCartBtnText}>В корзину</Text>
+        </TouchableOpacity>
+    );
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.quantity === nextProps.quantity &&
+        prevProps.onIncrement === nextProps.onIncrement &&
+        prevProps.onDecrement === nextProps.onDecrement &&
+        prevProps.onAddToCart === nextProps.onAddToCart
+    );
+});
+CartButtons.displayName = 'CartButtons';
+
+// Memoized grid item component
+const GridItem = React.memo(({ item, onPress }: CardProps) => {
+    const dispatch = useAppDispatch();
+
+    // ✅ ИСПРАВЛЕНО: Используем мемоизированный селектор
+    const selectCartItem = useMemo(() => getCartItemSelector(item.id), [item.id]);
+    const cartItem = useAppSelector(state => selectCartItem(state, item.id));
+    const quantity = cartItem?.quantity || 0;
+
+    // ✅ Состояние для отслеживания активного изображения
+    const [activeImageIndex, setActiveImageIndex] = React.useState(0);
+
+    // ✅ Мемоизированные callback'и для корзины
+    const handleIncrement = useCallback(() => {
+        dispatch(updateQuantity({ productId: item.id, quantity: quantity + 1 }));
+    }, [dispatch, item.id, quantity]);
+
+    const handleDecrement = useCallback(() => {
+        if (quantity === 1) {
+            dispatch(removeFromCart(item.id));
+        } else {
+            dispatch(updateQuantity({ productId: item.id, quantity: quantity - 1 }));
+        }
+    }, [dispatch, item.id, quantity]);
+
+    const handleAddToCart = useCallback(() => {
+        dispatch(addToCart({ product: item, quantity: 1 }));
+    }, [dispatch, item]);
+
+    // ✅ Мемоизированный обработчик изменения индекса
+    const handleIndexChange = useCallback((newIndex: number) => {
+        setActiveImageIndex(newIndex);
+    }, []);
+
+    return (
+        <View style={styles.gridCard}>
+            {/* ✅ ОПТИМИЗИРОВАННАЯ ГАЛЕРЕЯ ИЗОБРАЖЕНИЙ */}
+            <ProductGallery
+                images={item.images || []}
+                activeIndex={activeImageIndex}
+                onIndexChange={handleIndexChange}
+                onPress={onPress}
+            />
 
             {/* Текстовая часть с TouchableOpacity */}
-            <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.textSection}>
-                <View style={styles.priceRow}>
-                    <Text style={styles.productPrice}>{item.price} ₽</Text>
-                    {item.old_price && <Text style={styles.oldPrice}>{item.old_price} ₽</Text>}
-                    {item.price && item.old_price && item.discount && <Text style={styles.discountPrice}>-{Math.abs(item.discount)}%</Text>}
-                </View>
-                <Text style={styles.productName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
-            </TouchableOpacity>
+            <ProductInfo
+                item={item}
+                onPress={onPress}
+            />
 
-            {/* Кнопки корзины */}
-            {quantity > 0 ? (
-                <QuantityCartButton
-                    quantity={quantity}
-                    onIncrement={() => dispatch(updateQuantity({ productId: item.id, quantity: quantity + 1 }))}
-                    onDecrement={() => quantity === 1 ? dispatch(removeFromCart(item.id)) : dispatch(updateQuantity({ productId: item.id, quantity: quantity - 1 }))}
-                />
-            ) : (
-                <TouchableOpacity style={styles.addToCartBtn} onPress={() => dispatch(addToCart({ product: item, quantity: 1 }))} activeOpacity={0.85}>
-                    <Ionicons name="cart" size={18} color="#fff" />
-                    <Text style={styles.addToCartBtnText}>В корзину</Text>
-                </TouchableOpacity>
-            )}
+            {/* ✅ Кнопки корзины с мемоизированными callback'ами */}
+            <CartButtons
+                quantity={quantity}
+                onIncrement={handleIncrement}
+                onDecrement={handleDecrement}
+                onAddToCart={handleAddToCart}
+            />
         </View>
+    );
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.item.id === nextProps.item.id &&
+        prevProps.item.price === nextProps.item.price &&
+        prevProps.item.name === nextProps.item.name &&
+        prevProps.item.images?.length === nextProps.item.images?.length &&
+        prevProps.onPress === nextProps.onPress
     );
 });
 GridItem.displayName = 'GridItem';
@@ -182,59 +357,69 @@ GridItem.displayName = 'GridItem';
 // Memoized list item component
 const ListItem = React.memo(({ item, onPress }: CardProps) => {
     const dispatch = useAppDispatch();
-    const cartItems = useAppSelector((state: RootState) => state.cart.items);
-    const cartItem = cartItems.find(i => i.product.id === item.id);
+
+    // ✅ ИСПРАВЛЕНО: Используем мемоизированный селектор
+    const selectCartItem = useMemo(() => getCartItemSelector(item.id), [item.id]);
+    const cartItem = useAppSelector(state => selectCartItem(state, item.id));
     const quantity = cartItem?.quantity || 0;
 
-    // Галерея картинок
-    const renderImage = () => {
-        if (item.images && item.images.length > 0) {
-            return (
-                <OptimizedImage
-                    source={{ uri: item.images[0] }}
-                    style={styles.productImage}
-                    contentFit="contain"
-                    priority="high"
-                />
-            );
+    // ✅ Мемоизированные callback'и для корзины
+    const handleIncrement = useCallback(() => {
+        dispatch(updateQuantity({ productId: item.id, quantity: quantity + 1 }));
+    }, [dispatch, item.id, quantity]);
+
+    const handleDecrement = useCallback(() => {
+        if (quantity === 1) {
+            dispatch(removeFromCart(item.id));
         } else {
-            return <View style={styles.imagePlaceholder}></View>;
+            dispatch(updateQuantity({ productId: item.id, quantity: quantity - 1 }));
         }
-    };
+    }, [dispatch, item.id, quantity]);
+
+    const handleAddToCart = useCallback(() => {
+        dispatch(addToCart({ product: item, quantity: 1 }));
+    }, [dispatch, item]);
 
     return (
         <View style={styles.listCard}>
-            <TouchableOpacity style={{ flex: 1, flexDirection: 'row' }} onPress={onPress} activeOpacity={0.8}>
-                <View style={styles.listImageContainer}>
-                    {item.price && item.old_price && (
-                        <View style={styles.discountBadge}>
-                            <Text style={styles.discountText}>-{item.discount}%</Text>
-                        </View>
-                    )}
-                    {renderImage()}
-                </View>
-                <View style={styles.listContent}>
-                    <Text style={styles.productName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+            <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.listImageContainer}>
+                <OptimizedImage
+                    source={{ uri: item.images?.[0] || '' }}
+                    style={styles.productImage}
+                    contentFit="cover"
+                    priority="normal"
+                />
+            </TouchableOpacity>
+
+            <View style={styles.listContent}>
+                <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.textSection}>
+                    <Text style={styles.productName} numberOfLines={2} ellipsizeMode="tail">
+                        {item.name}
+                    </Text>
                     <View style={styles.priceRow}>
                         <Text style={styles.productPrice}>{item.price} ₽</Text>
                         {item.old_price && <Text style={styles.oldPrice}>{item.old_price} ₽</Text>}
-                        {item.price && item.old_price && item.discount && <Text style={styles.discountPrice}>-{Math.abs(item.discount)}%</Text>}
+                        {item.discount && <Text style={styles.discountPrice}>-{Math.abs(item.discount)}%</Text>}
                     </View>
-                </View>
-            </TouchableOpacity>
-            {quantity > 0 ? (
-                <QuantityCartButton
-                    quantity={quantity}
-                    onIncrement={() => dispatch(updateQuantity({ productId: item.id, quantity: quantity + 1 }))}
-                    onDecrement={() => quantity === 1 ? dispatch(removeFromCart(item.id)) : dispatch(updateQuantity({ productId: item.id, quantity: quantity - 1 }))}
-                />
-            ) : (
-                <TouchableOpacity style={styles.addToCartBtn} onPress={() => dispatch(addToCart({ product: item, quantity: 1 }))} activeOpacity={0.85}>
-                    <Ionicons name="cart" size={18} color="#fff" />
-                    <Text style={styles.addToCartBtnText}>В корзину</Text>
                 </TouchableOpacity>
-            )}
+
+                {/* ✅ Кнопки корзины с мемоизированными callback'ами */}
+                <CartButtons
+                    quantity={quantity}
+                    onIncrement={handleIncrement}
+                    onDecrement={handleDecrement}
+                    onAddToCart={handleAddToCart}
+                />
+            </View>
         </View>
+    );
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.item.id === nextProps.item.id &&
+        prevProps.item.price === nextProps.item.price &&
+        prevProps.item.name === nextProps.item.name &&
+        prevProps.item.images?.[0] === nextProps.item.images?.[0] &&
+        prevProps.onPress === nextProps.onPress
     );
 });
 ListItem.displayName = 'ListItem';
@@ -362,12 +547,13 @@ export default function ProductsScreen() {
                     contentContainerStyle={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}
                     columnWrapperStyle={viewMode === 'grid' ? { marginBottom: 0, gap: GRID_GAP } : undefined}
                     showsVerticalScrollIndicator={false}
-                    // Оптимизация производительности
-                    removeClippedSubviews={true}
-                    maxToRenderPerBatch={viewMode === 'grid' ? 4 : 8}
-                    initialNumToRender={viewMode === 'grid' ? 6 : 10}
-                    windowSize={5}
-                    updateCellsBatchingPeriod={100}
+                    // ✅ ИСПРАВЛЕНО: Настройки для устранения подергивания в конце каталога
+                    removeClippedSubviews={false}  // Отключаем для стабильности в конце списка
+                    maxToRenderPerBatch={viewMode === 'grid' ? 4 : 6}  // Увеличиваем батч
+                    initialNumToRender={viewMode === 'grid' ? 6 : 8}   // Увеличиваем начальный рендер
+                    windowSize={5}  // Увеличиваем окно рендера для стабильности
+                    updateCellsBatchingPeriod={100}  // Увеличиваем период для плавности
+                    scrollEventThrottle={16}
                     getItemLayout={viewMode === 'grid' ?
                         (_, index) => ({
                             length: GRID_CARD_HEIGHT,
@@ -380,6 +566,13 @@ export default function ProductsScreen() {
                             index,
                         })
                     }
+                    // ✅ ДОПОЛНИТЕЛЬНЫЕ ОПТИМИЗАЦИИ ДЛЯ СТАБИЛЬНОСТИ
+                    disableIntervalMomentum={true}
+                    legacyImplementation={false}
+                    maintainVisibleContentPosition={{
+                        minIndexForVisible: 0,
+                        autoscrollToTopThreshold: 10
+                    }}
                 />
             )}
         </SafeAreaView>
@@ -420,7 +613,7 @@ const styles = StyleSheet.create({
     listContainer: {
         paddingHorizontal: GRID_GAP,
         paddingTop: GRID_GAP,
-        paddingBottom: 80,
+        paddingBottom: 90,  // Уменьшено с 120 до 90 для оптимального расстояния до меню
     },
     loadingContainer: {
         flex: 1,
@@ -540,75 +733,75 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         marginTop: 2,
         alignSelf: 'stretch',
+        height: 36, // Фиксированная высота - такая же как у белой кнопки
     },
     addToCartBtnText: {
         fontSize: 14,
         fontWeight: 'bold',
         color: '#fff',
     },
-    counterContainer: {
+
+    // ✅ ТОЧНОЕ ПОЗИЦИОНИРОВАНИЕ ЭЛЕМЕНТОВ В БЕЛОЙ КНОПКЕ
+    cartButtonContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f3e6ff',
-        borderRadius: 16,
-        paddingVertical: 10,
-        paddingHorizontal: 18,
-        marginTop: 4,
-        alignSelf: 'stretch',
-        minHeight: 48,
-        minWidth: 120,
-    },
-    counterBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
         backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginHorizontal: 4,
-        borderWidth: 1,
-        borderColor: '#d1b3ff',
-    },
-    counterBtnText: {
-        fontSize: 16,
-        color: '#1976d2',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    counterValue: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#a259ff',
-        minWidth: 28,
-        textAlign: 'center',
-    },
-    cartRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 8,
-        marginBottom: 2,
-        alignSelf: 'stretch',
-    },
-    cartSquare: {
-        width: 26,
-        height: 26,
-        borderRadius: 5,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginHorizontal: 2,
+        borderRadius: 6,
         borderWidth: 1,
         borderColor: '#1976d2',
+        paddingVertical: 8,
+        paddingHorizontal: 0, // Убираем общий отступ, используем индивидуальные
+        marginTop: 2,
+        alignSelf: 'stretch',
+        height: 36,
+        position: 'relative',
     },
-    cartQuantity: {
+    // ✅ КНОПКА "-" В ЛЕВОМ УГЛУ
+    quantityButtonMinus: {
+        width: 48,
+        height: 24,
+        borderRadius: 3,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#1976d2',
+        marginLeft: 8, // 8px от левого края
+        marginRight: 4, // 4px до счетчика
+    },
+    // ✅ КНОПКА "+" В ЦЕНТРЕ
+    quantityButton: {
+        width: 48,
+        height: 24,
+        borderRadius: 3,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#1976d2',
+        marginLeft: 4, // 4px от счетчика
+    },
+    quantityButtonText: {
+        fontSize: 14,
+        color: '#1976d2',
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    quantityDisplay: {
         color: '#1976d2',
         fontWeight: 'bold',
         fontSize: 16,
-        marginHorizontal: 8,
-        minWidth: 20,
         textAlign: 'center',
+        flex: 1, // Занимает все оставшееся место между кнопками
+    },
+    // ✅ ИКОНКА КОРЗИНЫ В ПРАВОМ УГЛУ (ЗЕРКАЛЬНО)
+    cartIconButtonRight: {
+        width: 24,
+        height: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 6, // 6px от кнопки "+"
+        marginRight: 8, // 8px от правого края
     },
     filterContainer: {
         flexDirection: 'row',
@@ -643,26 +836,44 @@ const styles = StyleSheet.create({
     filterTextActive: {
         color: '#fff',
     },
-    galleryContainer: {
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-    },
-    galleryImageContainer: {
-        width: GRID_CARD_WIDTH,
-        height: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     galleryImage: {
         width: '100%',
         height: '100%',
         borderRadius: 8,
         aspectRatio: 4 / 5,
     },
-    galleryFlatList: {
+    textSection: {
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+    },
+    gridContainer: {
+        paddingHorizontal: GRID_GAP,
+        paddingTop: GRID_GAP,
+        paddingBottom: 90,  // Уменьшено с 120 до 90 для оптимального расстояния до меню
+    },
+    galleryContainer: {
         width: '100%',
         height: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: 0,
+        padding: 0,
+        overflow: 'hidden',
+        aspectRatio: 4 / 5,
+    },
+    galleryImageContainer: {
+        width: GRID_CARD_WIDTH,
+        height: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: 0,
+        padding: 0,
+        overflow: 'hidden',
+        aspectRatio: 4 / 5,
     },
     pagination: {
         flexDirection: 'row',
@@ -682,15 +893,6 @@ const styles = StyleSheet.create({
         width: 3,
         height: 3,
         borderRadius: 1.5,
-    },
-    textSection: {
-        paddingHorizontal: 4,
-        paddingVertical: 2,
-    },
-    gridContainer: {
-        paddingHorizontal: GRID_GAP,
-        paddingTop: GRID_GAP,
-        paddingBottom: 80,
     },
 });
 

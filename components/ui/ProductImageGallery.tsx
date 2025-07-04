@@ -117,7 +117,11 @@ const ProductImageGallery = ({ images, initialIndex = 0 }: ProductImageGalleryPr
                 keyExtractor={(_, index) => `image-${index}`}
                 renderItem={renderItem}
                 horizontal
-                pagingEnabled
+                // ✅ ИСПРАВЛЕНО: Заменяем pagingEnabled на snapToInterval для точной фиксации
+                snapToInterval={SCREEN_WIDTH}
+                snapToAlignment="start"
+                disableIntervalMomentum={true}
+                decelerationRate="fast"
                 showsHorizontalScrollIndicator={false}
                 onScroll={handleScroll}
                 onMomentumScrollEnd={handleMomentumScrollEnd}

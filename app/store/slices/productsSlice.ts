@@ -23,27 +23,49 @@ const initialState: ProductsState = {
     status: 'idle',
     error: null,
     viewMode: 'grid',
-    activeFilter: 'all'
+    activeFilter: 'all',
 };
+
+// ✅ Мемоизированные селекторы для оптимизации производительности
+export const selectProductsState = (state: RootState) => state.products;
+
+export const selectAllProducts = createSelector(
+    [selectProductsState],
+    (productsState) => productsState.items
+);
+
+export const selectActiveFilter = createSelector(
+    [selectProductsState],
+    (productsState) => productsState.activeFilter
+);
+
+export const selectViewMode = createSelector(
+    [selectProductsState],
+    (productsState) => productsState.viewMode
+);
+
+export const selectProductsStatus = createSelector(
+    [selectProductsState],
+    (productsState) => productsState.status
+);
+
+// ✅ Селектор для корзины с мемоизацией
+export const selectCartItemByProductId = createSelector(
+    [(state: RootState) => state.cart.items, (_: RootState, productId: string) => productId],
+    (cartItems, productId) => cartItems.find(item => item.product.id === productId)
+);
 
 // Функция фильтрации товаров
-const filterProducts = (items: ProductItem[], filter: FilterCategory): ProductItem[] => {
-    if (filter === 'all') return items;
-
-    return items.filter(item => {
-        const category = item.category?.toLowerCase();
-        switch (filter) {
-            case 'clothing':
-                return category === 'clothing' || category === 'одежда';
-            case 'equipment':
-                return category === 'equipment' || category === 'оборудование';
-            case 'supplements':
-                return category === 'supplements' || category === 'добавки' || category === 'бады';
-            default:
-                return true;
-        }
-    });
+const filterProducts = (products: ProductItem[], filter: FilterCategory): ProductItem[] => {
+    if (filter === 'all') return products;
+    return products.filter(product => product.category === filter);
 };
+
+// ✅ Мемоизированный селектор для фильтрованных товаров
+export const selectFilteredProducts = createSelector(
+    [selectAllProducts, selectActiveFilter],
+    (products, activeFilter) => filterProducts(products, activeFilter)
+);
 
 // Async thunk для получения товаров из Supabase
 export const fetchProducts = createAsyncThunk(
@@ -88,34 +110,5 @@ export const productsSlice = createSlice({
 });
 
 export const { setViewMode, setFilter } = productsSlice.actions;
-
-// Мемоизированные селекторы
-export const selectProducts = (state: RootState) => state.products.items;
-export const selectProductsStatus = (state: RootState) => state.products.status;
-export const selectProductsError = (state: RootState) => state.products.error;
-export const selectActiveFilter = (state: RootState) => state.products.activeFilter;
-export const selectViewMode = (state: RootState) => state.products.viewMode;
-
-// Мемоизированный селектор для отфильтрованных товаров
-export const selectFilteredProducts = createSelector(
-    [selectProducts, selectActiveFilter],
-    (products, activeFilter) => {
-        if (activeFilter === 'all') return products;
-
-        return products.filter(item => {
-            const category = item.category?.toLowerCase();
-            switch (activeFilter) {
-                case 'clothing':
-                    return category === 'clothing' || category === 'одежда';
-                case 'equipment':
-                    return category === 'equipment' || category === 'оборудование';
-                case 'supplements':
-                    return category === 'supplements' || category === 'добавки' || category === 'бады';
-                default:
-                    return true;
-            }
-        });
-    }
-);
 
 export default productsSlice.reducer; 
