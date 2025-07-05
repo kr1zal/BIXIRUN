@@ -1,97 +1,98 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface CartSummaryProps {
-    subtotal: string;
-    shipping: string;
-    tax: string;
-    total: string;
+    originalTotal: number;
+    discount: number;
+    total: number;
     itemCount: number;
     onCheckout: () => void;
 }
 
-const CartSummary = ({
-    subtotal,
-    shipping,
-    tax,
+const CartSummary = memo(({
+    originalTotal,
+    discount,
     total,
     itemCount,
     onCheckout
 }: CartSummaryProps) => {
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Итого</Text>
-
-            {/* Расчет итоговой стоимости */}
-            <View style={styles.row}>
-                <Text style={styles.label}>Товары ({itemCount})</Text>
-                <Text style={styles.value}>{subtotal} ₽</Text>
+            <View style={styles.detailsContainer}>
+                <View style={{ transform: [{ translateY: 1.5 }] }}>
+                    <View style={styles.row}>
+                        <Text style={styles.label}>Товары ({itemCount})</Text>
+                        <Text style={styles.value}>{originalTotal} ₽</Text>
+                    </View>
+                    {discount > 0 && (
+                        <View style={styles.row}>
+                            <Text style={styles.label}>Скидка</Text>
+                            <Text style={[styles.value, styles.discountValue]}>-{discount} ₽</Text>
+                        </View>
+                    )}
+                </View>
+                <View style={[styles.row, styles.totalRow]}>
+                    <Text style={styles.totalLabel}>К оплате</Text>
+                    <Text style={styles.totalValue}>{total} ₽</Text>
+                </View>
             </View>
 
-            <View style={styles.row}>
-                <Text style={styles.label}>Доставка</Text>
-                <Text style={styles.value}>{shipping === '0.00' ? 'Бесплатно' : `${shipping} ₽`}</Text>
-            </View>
-
-            <View style={styles.row}>
-                <Text style={styles.label}>Налог</Text>
-                <Text style={styles.value}>{tax} ₽</Text>
-            </View>
-
-            <View style={[styles.row, styles.totalRow]}>
-                <Text style={styles.totalLabel}>К оплате</Text>
-                <Text style={styles.totalValue}>{total} ₽</Text>
-            </View>
-
-            {/* Кнопка оформления заказа */}
             <TouchableOpacity
                 style={styles.checkoutButton}
                 onPress={onCheckout}
                 disabled={itemCount === 0}
             >
-                <Ionicons name="card-outline" size={20} color="#FFFFFF" style={styles.icon} />
-                <Text style={styles.checkoutButtonText}>Оформить заказ</Text>
+                <Text style={styles.checkoutButtonText}>Оформить</Text>
             </TouchableOpacity>
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     container: {
+        position: 'absolute',
+        bottom: 72, // Опускаем еще на 3px
+        left: 0,
+        right: 0,
         backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        padding: 16,
-        marginTop: 16,
-        marginBottom: 100, // Оставляем место для нижнего меню
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderTopLeftRadius: 15,
+        borderTopRightRadius: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
-    title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#212121',
-        marginBottom: 16,
+    detailsContainer: {
+        flex: 1,
+        marginRight: 12,
+        transform: [{ translateY: -10.7 }], // Опускаем весь блок на 1.3px
     },
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 8,
+        alignItems: 'center',
+        marginBottom: 0.7, // Устанавливаем отступ в 0.7px
     },
     label: {
-        fontSize: 14,
+        fontSize: 12, // Уменьшаем шрифт
         color: '#757575',
     },
     value: {
-        fontSize: 14,
+        fontSize: 12, // Уменьшаем шрифт
         color: '#212121',
         fontWeight: '500',
     },
+    discountValue: {
+        color: '#4CAF50', // Зеленый цвет для скидки
+    },
     totalRow: {
-        marginTop: 8,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#EEEEEE',
+        marginBottom: 0, // Обнуляем нижний отступ для последней строки
     },
     totalLabel: {
         fontSize: 16,
@@ -99,27 +100,25 @@ const styles = StyleSheet.create({
         color: '#212121',
     },
     totalValue: {
-        fontSize: 18,
+        fontSize: 16, // Уменьшаем, чтобы соответствовать кнопке
         fontWeight: 'bold',
-        color: '#1976d2',
+        color: '#212121',
     },
     checkoutButton: {
         backgroundColor: '#1976d2',
         borderRadius: 8,
-        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 12,
-        marginTop: 16,
+        paddingHorizontal: 16,
+        alignSelf: 'flex-end',
+        transform: [{ translateY: -13 }], // Поднимаем кнопку еще на 1px
     },
     checkoutButtonText: {
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
     },
-    icon: {
-        marginRight: 8,
-    }
 });
 
-export default memo(CartSummary); 
+export default CartSummary; 

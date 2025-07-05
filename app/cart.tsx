@@ -1,17 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import Checkbox from 'expo-checkbox';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../app/store';
-import {
-    clearCart,
-    removeFromCart,
-    selectCartItemsCount,
-    selectCartTotal,
-    updateQuantity
-} from './store/slices/cartSlice';
+// ✅ ЗАМЕНЯЕМ МНОЖЕСТВЕННЫЕ СЕЛЕКТОРЫ НА ОПТИМИЗИРОВАННЫЙ ХУК
+import { useCart } from '../hooks/useCart';
+import { CartItem as CartItemType } from './store/slices/cartSlice';
 
 // Импортируем компоненты
 import CartItem from '../components/cart/CartItem';
@@ -20,34 +15,36 @@ import EmptyCart from '../components/cart/EmptyCart';
 
 export default function CartScreen() {
     const router = useRouter();
-    const dispatch = useDispatch();
 
-    // Получаем данные из Redux
-    const cartItems = useSelector((state: RootState) => state.cart.items);
-    const cartTotal = useSelector(selectCartTotal);
-    const itemCount = useSelector(selectCartItemsCount);
+    // ✅ ИСПОЛЬЗУЕМ ОПТИМИЗИРОВАННЫЙ ХУК ВМЕСТО МНОЖЕСТВЕННЫХ СЕЛЕКТОРОВ
+    const {
+        cartItems,
+        isEmpty,
+        allItemsSelected,
+        cartSummary,
+        removeFromCart,
+        updateQuantity,
+        toggleItemSelected,
+        toggleSelectAll,
+        clearCart,
+    } = useCart();
 
-    // Проверяем, пуста ли корзина
-    const isCartEmpty = cartItems.length === 0;
-
-    // Мемоизированные значения для CartSummary
-    const summaryData = useMemo(() => {
-        const subtotal = cartTotal;
-        const tax = (parseFloat(subtotal) * 0.05).toFixed(2); // 5% налог
-        const shipping = itemCount >= 3 || parseFloat(subtotal) > 50 ? '0.00' : '5.00';
-        const total = (parseFloat(subtotal) + parseFloat(tax) + parseFloat(shipping)).toFixed(2);
-
-        return { subtotal, tax, shipping, total };
-    }, [cartTotal, itemCount]);
-
-    // Обработчики для компонентов
+    // Обработчики для компонентов - теперь используем методы из хука
     const handleRemoveItem = useCallback((productId: string) => {
-        dispatch(removeFromCart(productId));
-    }, [dispatch]);
+        removeFromCart(productId);
+    }, [removeFromCart]);
 
     const handleUpdateQuantity = useCallback((productId: string, quantity: number) => {
-        dispatch(updateQuantity({ productId, quantity }));
-    }, [dispatch]);
+        updateQuantity(productId, quantity);
+    }, [updateQuantity]);
+
+    const handleToggleItem = useCallback((productId: string) => {
+        toggleItemSelected(productId);
+    }, [toggleItemSelected]);
+
+    const handleToggleSelectAll = useCallback(() => {
+        toggleSelectAll(!allItemsSelected);
+    }, [toggleSelectAll, allItemsSelected]);
 
     const handleCheckout = useCallback(() => {
         Alert.alert(
@@ -70,54 +67,94 @@ export default function CartScreen() {
                 { text: "Отмена", style: "cancel" },
                 {
                     text: "Очистить",
-                    onPress: () => dispatch(clearCart()),
+                    onPress: () => clearCart(),
                     style: "destructive"
                 }
             ]
         );
-    }, [dispatch]);
+    }, [clearCart]);
+
+    // Мемоизируем рендер-функцию для FlatList, чтобы избежать лишних перерисовок
+    const renderItem = useCallback(({ item }: { item: CartItemType }) => (
+        <CartItem
+            item={item}
+            onRemove={handleRemoveItem}
+            onUpdateQuantity={handleUpdateQuantity}
+            onToggleSelect={handleToggleItem}
+        />
+    ), [handleRemoveItem, handleUpdateQuantity, handleToggleItem]);
+
+    // Мемоизируем keyExtractor для стабильности
+    const keyExtractor = useCallback((item: CartItemType) => item.product.id, []);
+
+    // ✅ ОПТИМИЗАЦИИ FLATLIST ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ
+    // Фиксированная высота элементов для getItemLayout
+    const ITEM_HEIGHT = 108; // Высота CartItem (padding + content)
+
+    // Мемоизируем getItemLayout для виртуализации
+    const getItemLayout = useCallback((data: any, index: number) => ({
+        length: ITEM_HEIGHT,
+        offset: ITEM_HEIGHT * index,
+        index,
+    }), []);
+
+    // Дополнительные оптимизации для FlatList
+    const flatListOptimizations = useMemo(() => ({
+        windowSize: 10,           // Количество экранов для рендеринга
+        maxToRenderPerBatch: 5,   // Максимум элементов за один батч
+        updateCellsBatchingPeriod: 100, // Интервал обновления в мс
+        initialNumToRender: 10,   // Начальное количество элементов
+        removeClippedSubviews: true, // Удаляем элементы вне экрана
+        scrollEventThrottle: 16,  // Частота событий скролла
+    }), []);
 
     return (
-        <View style={[styles.container, { flex: 1, paddingTop: 50, paddingBottom: 80, position: 'relative' }]}>
+        <View style={[styles.container, { flex: 1, paddingTop: 50, position: 'relative' }]}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Корзина</Text>
-                {!isCartEmpty && (
-                    <TouchableOpacity
-                        onPress={handleClearCart}
-                        style={styles.clearButton}
-                    >
-                        <Ionicons name="trash-outline" size={18} color="#FF5252" />
-                        <Text style={styles.clearButtonText}>Очистить</Text>
-                    </TouchableOpacity>
-                )}
             </View>
-            {isCartEmpty ? (
+            {isEmpty ? (
                 <EmptyCart onStartShopping={handleStartShopping} />
             ) : (
                 <>
-                    <FlatList
-                        data={cartItems}
-                        keyExtractor={(item) => item.product.id}
-                        renderItem={({ item }) => (
-                            <CartItem
-                                item={item}
-                                onRemove={handleRemoveItem}
-                                onUpdateQuantity={handleUpdateQuantity}
-                            />
-                        )}
-                        contentContainerStyle={styles.listContent}
-                        showsVerticalScrollIndicator={false}
-                        style={{ flex: 1 }}
-                        ListFooterComponent={
-                            <CartSummary
-                                subtotal={summaryData.subtotal}
-                                shipping={summaryData.shipping}
-                                tax={summaryData.tax}
-                                total={summaryData.total}
-                                itemCount={itemCount}
-                                onCheckout={handleCheckout}
-                            />
-                        }
+                    <View style={styles.listContainer}>
+                        <View style={styles.selectAllContainer}>
+                            <View style={styles.selectAllCheckbox}>
+                                <Checkbox
+                                    value={allItemsSelected}
+                                    onValueChange={handleToggleSelectAll}
+                                    color={allItemsSelected ? '#1976d2' : undefined}
+                                    style={styles.mainCheckbox} // Применяем стиль для скругления
+                                />
+                                <Text style={styles.selectAllText}>Выбрать все</Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={handleClearCart}
+                                style={styles.clearButton}
+                            >
+                                <Ionicons name="trash-outline" size={18} color="#FF5252" />
+                                <Text style={styles.clearButtonText}>Очистить</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={cartItems}
+                            keyExtractor={keyExtractor}
+                            renderItem={renderItem}
+                            contentContainerStyle={styles.listContent}
+                            showsVerticalScrollIndicator={false}
+                            // ✅ ОПТИМИЗАЦИИ ПРОИЗВОДИТЕЛЬНОСТИ
+                            getItemLayout={getItemLayout}
+                            {...flatListOptimizations}
+                        />
+                    </View>
+
+                    {/* CartSummary теперь вне FlatList для "липкого" позиционирования */}
+                    <CartSummary
+                        originalTotal={cartSummary.originalTotal}
+                        discount={cartSummary.discount}
+                        total={cartSummary.total}
+                        itemCount={cartSummary.itemCount}
+                        onCheckout={handleCheckout}
                     />
                 </>
             )}
@@ -130,19 +167,28 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F5',
         overflow: 'visible',
     },
+    listContainer: {
+        flex: 1, // Растягиваем контейнер на всю доступную высоту
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 15, // Скругляем только верхние углы
+        borderTopRightRadius: 15,
+        marginHorizontal: 8, // Небольшие отступы по бокам для эффекта карточки
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+    },
     listContent: {
-        padding: 16,
-        paddingTop: 20,
-        paddingBottom: 100,
+        paddingBottom: 180, // Увеличили отступ снизу, чтобы было место для CartSummary
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 16,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        backgroundColor: '#F5F5F5', // Фон как у основного контейнера
     },
     headerTitle: {
         fontSize: 18,
@@ -151,12 +197,37 @@ const styles = StyleSheet.create({
     clearButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 8,
+        padding: 8,
     },
     clearButtonText: {
         color: '#FF5252',
         fontSize: 14,
         marginLeft: 4,
+        fontWeight: '500',
+    },
+    selectAllContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        backgroundColor: 'transparent', // Фон теперь прозрачный
+        borderBottomWidth: 1, // Добавляем разделительную линию
+        borderBottomColor: '#F0F0F0', // Цвет линии как у товаров
+    },
+    selectAllCheckbox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    mainCheckbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 6, // Скругление как у чекбоксов на товарах
+    },
+    selectAllText: {
+        marginLeft: 12,
+        fontSize: 16,
+        fontWeight: '500',
     },
 });
 

@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { getData, STORAGE_KEYS, storeData } from '../../utils/storage';
 import { ProductItem } from './productsSlice';
 
@@ -6,6 +6,7 @@ import { ProductItem } from './productsSlice';
 export type CartItem = {
     product: ProductItem;
     quantity: number;
+    selected: boolean; // Добавлено поле для выбора
 };
 
 // Состояние корзины
@@ -67,8 +68,8 @@ export const cartSlice = createSlice({
                 // Если товар уже в корзине, увеличиваем количество
                 existingItem.quantity += quantity;
             } else {
-                // Иначе добавляем новый товар
-                state.items.push({ product, quantity });
+                // Иначе добавляем новый товар, по умолчанию выбран
+                state.items.push({ product, quantity, selected: true });
             }
         },
 
@@ -97,6 +98,23 @@ export const cartSlice = createSlice({
         // Очистка корзины
         clearCart: (state) => {
             state.items = [];
+        },
+
+        // Переключение выбора одного товара
+        toggleItemSelected: (state, action: PayloadAction<string>) => {
+            const productId = action.payload;
+            const item = state.items.find(item => item.product.id === productId);
+            if (item) {
+                item.selected = !item.selected;
+            }
+        },
+
+        // Переключение выбора всех товаров
+        toggleSelectAll: (state, action: PayloadAction<boolean>) => {
+            const selected = action.payload;
+            state.items.forEach(item => {
+                item.selected = selected;
+            });
         }
     },
     extraReducers: (builder) => {
@@ -106,9 +124,15 @@ export const cartSlice = createSlice({
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(loadCartFromStorage.fulfilled, (state, action) => {
+            .addCase(loadCartFromStorage.fulfilled, (state, action: PayloadAction<CartItem[]>) => {
                 state.isLoading = false;
-                state.items = action.payload;
+                // ✅ ОПТИМИЗАЦИЯ: Сохраняем оригинальное состояние selected
+                // Не перезаписываем selected: true для всех товаров
+                state.items = action.payload.map(item => ({
+                    ...item,
+                    // Если в сохраненных данных нет поля selected, устанавливаем true
+                    selected: item.selected !== undefined ? item.selected : true
+                }));
             })
             .addCase(loadCartFromStorage.rejected, (state, action) => {
                 state.isLoading = false;
@@ -129,41 +153,75 @@ export const {
     addToCart,
     removeFromCart,
     updateQuantity,
-    clearCart
+    clearCart,
+    toggleItemSelected,
+    toggleSelectAll
 } = cartSlice.actions;
 
-// Middleware для автоматического сохранения корзины
-export const saveCartMiddleware = (store: any) => (next: any) => (action: any) => {
-    // Выполняем действие
-    const result = next(action);
+// ✅ ОПТИМИЗИРОВАННЫЕ СЕЛЕКТОРЫ С МЕМОИЗАЦИЕЙ
+// Мемоизируем базовые селекторы
+const selectCartItems = (state: { cart: CartState }) => state.cart.items;
+const selectSelectedCartItems = createSelector(
+    [selectCartItems],
+    (items) => items.filter(item => item.selected)
+);
 
-    // Проверяем, было ли это действие с корзиной
-    if (
-        action.type.startsWith('cart/') &&
-        !action.type.includes('loadFromStorage') &&
-        !action.type.includes('saveToStorage')
-    ) {
-        // Получаем текущее состояние корзины после обработки действия
-        const state = store.getState();
-        const cartItems = state.cart.items;
-
-        // Сохраняем корзину в AsyncStorage
-        store.dispatch(saveCartToStorage(cartItems));
+// Селектор для получения общей стоимости ВСЕХ товаров в корзине
+export const selectCartTotal = createSelector(
+    [selectCartItems],
+    (items) => {
+        const total = items.reduce((sum, item) => {
+            const price = parseFloat(item.product.price);
+            return sum + (price * item.quantity);
+        }, 0);
+        return total.toFixed(2);
     }
+);
 
-    return result;
-};
+// Селектор для получения общего количества ВСЕХ товаров в корзине
+export const selectCartItemsCount = createSelector(
+    [selectCartItems],
+    (items) => items.reduce((count, item) => count + item.quantity, 0)
+);
 
-// Селектор для получения общей стоимости корзины
-export const selectCartTotal = (state: { cart: CartState }) => {
-    return state.cart.items.reduce((total, item) => {
-        return total + (parseFloat(item.product.price) * item.quantity);
-    }, 0).toFixed(2);
-};
+// --- ОПТИМИЗИРОВАННЫЕ СЕЛЕКТОРЫ ДЛЯ ВЫБРАННЫХ ТОВАРОВ ---
 
-// Селектор для получения общего количества товаров в корзине
-export const selectCartItemsCount = (state: { cart: CartState }) => {
-    return state.cart.items.reduce((count, item) => count + item.quantity, 0);
-};
+// Селектор для получения только выбранных товаров
+export const selectSelectedItems = selectSelectedCartItems;
+
+// Селектор для получения общей стоимости ВЫБРАННЫХ товаров
+export const selectSelectedItemsTotal = createSelector(
+    [selectSelectedCartItems],
+    (selectedItems) => {
+        const total = selectedItems.reduce((sum, item) => {
+            const price = parseFloat(item.product.price);
+            return sum + (price * item.quantity);
+        }, 0);
+        return total.toFixed(2);
+    }
+);
+
+// Селектор для получения общей стоимости ВЫБРАННЫХ товаров (без скидки)
+export const selectSelectedItemsOriginalTotal = createSelector(
+    [selectSelectedCartItems],
+    (selectedItems) => {
+        return selectedItems.reduce((sum, item) => {
+            const originalPrice = parseFloat(item.product.old_price || item.product.price);
+            return sum + (originalPrice * item.quantity);
+        }, 0);
+    }
+);
+
+// Селектор для получения общей скидки по ВЫБРАННЫМ товарам
+export const selectSelectedItemsDiscount = createSelector(
+    [selectSelectedCartItems],
+    (selectedItems) => {
+        return selectedItems.reduce((discount, item) => {
+            const originalPrice = parseFloat(item.product.old_price || item.product.price);
+            const currentPrice = parseFloat(item.product.price);
+            return discount + (originalPrice - currentPrice) * item.quantity;
+        }, 0);
+    }
+);
 
 export default cartSlice.reducer; 
