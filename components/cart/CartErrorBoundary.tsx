@@ -12,7 +12,6 @@ const CartStatusHandler = memo(() => {
 
     const handleRetry = useCallback(() => {
         // Логика повторной попытки загрузки
-        console.log('Retry cart loading...');
     }, []);
 
     if (isLoading) {

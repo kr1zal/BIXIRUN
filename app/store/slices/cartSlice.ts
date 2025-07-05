@@ -31,10 +31,8 @@ export const loadCartFromStorage = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const cartData = await getData<CartItem[]>(STORAGE_KEYS.CART);
-            console.log('Loaded cart data:', cartData);
             return cartData || [];
         } catch (error) {
-            console.error('Error loading cart:', error);
             return rejectWithValue('Не удалось загрузить данные корзины');
         }
     }
@@ -46,10 +44,8 @@ export const saveCartToStorage = createAsyncThunk(
     async (items: CartItem[], { rejectWithValue }) => {
         try {
             await storeData(STORAGE_KEYS.CART, items);
-            console.log('Saved cart data:', items);
             return Date.now(); // Возвращаем время сохранения
         } catch (error) {
-            console.error('Error saving cart:', error);
             return rejectWithValue('Не удалось сохранить данные корзины');
         }
     }
