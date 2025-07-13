@@ -7,13 +7,26 @@
 ### 🏠 Корневые документы
 
 - [`../PRODUCT_CARDS_COMPLETE.md`](../PRODUCT_CARDS_COMPLETE.md) - Полное
-  руководство по продуктовым карточкам
+  руководство по продуктовым карточкам **[БУДЕТ ПЕРЕНЕСЕНО]**
 - [`../NAVIGATION_ERROR.md`](../NAVIGATION_ERROR.md) - Хронология исправлений
-  меню навигации
+  меню навигации **[БУДЕТ ВКЛЮЧЕНО В CHANGELOG]**
 - [`BLOG_UI_UX_MODERNIZATION_SUMMARY.md`](./BLOG_UI_UX_MODERNIZATION_SUMMARY.md) -
   Сводка модернизации UI/UX блога **[НОВЫЙ 2024-12-25]**
 
 ### 📁 Организованная документация
+
+#### 🛒 [Catalog](./catalog/) **[НОВАЯ СТРУКТУРА]**
+
+Документация каталога товаров:
+
+- [`CURRENT_STATE.md`](./catalog/CURRENT_STATE.md) - Текущее состояние системы,
+  компоненты, API, известные проблемы
+- [`ARCHITECTURE.md`](./catalog/ARCHITECTURE.md) - Архитектура, структура
+  файлов, зависимости, типы данных
+- [`PERFORMANCE.md`](./catalog/PERFORMANCE.md) - Оптимизация производительности,
+  FlatList, мемоизация
+- [`CHANGELOG.md`](./catalog/CHANGELOG.md) - Хронология изменений, решенные
+  проблемы, история багов
 
 #### 🔧 [Development](./development/)
 
@@ -71,35 +84,24 @@
 - [`supabase_optimizations.md`](./optimization/supabase_optimizations.md) -
   Оптимизация Supabase
 
-#### 📦 [Product Cards](./product-cards/)
-
-Специализированная документация по продуктовым карточкам:
-
-- [`REFERENCE_COMPONENTS.md`](./product-cards/REFERENCE_COMPONENTS.md) - API
-  всех компонентов
-- [`REFERENCE_FIXES.md`](./product-cards/REFERENCE_FIXES.md) - История багов и
-  исправлений
-- [`REFERENCE_PERFORMANCE.md`](./product-cards/REFERENCE_PERFORMANCE.md) -
-  Техники оптимизации
-
 #### 📚 [Archive](./archive/)
 
 Архивная документация:
 
 - [`product-cards/`](./archive/product-cards/) - Устаревшие файлы по продуктовым
-  карточкам
+  карточкам **[14 файлов - БУДУТ КОНСОЛИДИРОВАНЫ]**
 
 ## 🔍 Как найти нужную информацию
 
 ### По типу задачи:
 
 - **Разработка новой фичи** → `implementation/`
-- **Исправление бага** → `fixes/` или `product-cards/REFERENCE_FIXES.md`
+- **Исправление бага** → `fixes/` или `catalog/CHANGELOG.md`
 - **Оптимизация производительности** → `optimization/` или
-  `product-cards/REFERENCE_PERFORMANCE.md`
+  `catalog/PERFORMANCE.md`
 - **Работа с базой данных** → `database/`
-- **Продуктовые карточки** → `../PRODUCT_CARDS_COMPLETE.md` + `product-cards/`
-- **Проблемы с навигацией** → `../NAVIGATION_ERROR.md`
+- **Каталог товаров** → `catalog/` **[НОВАЯ СТРУКТУРА]**
+- **Проблемы с навигацией** → `catalog/CHANGELOG.md`
 
 ### По технологии:
 
@@ -108,6 +110,7 @@
 - **Redux** → `development/ARTICLES_DEVELOPMENT_LOG.md`
 - **Аутентификация** → `implementation/AUTH_IMPLEMENTATION.md`
 - **Таймер/Видео** → `development/TIMER_*.md`
+- **Каталог/Product Cards** → `catalog/` **[НОВАЯ СТРУКТУРА]**
 
 ## 📝 Соглашения документации
 
@@ -119,8 +122,9 @@
 
 ## 🔗 Быстрые ссылки
 
-- [Главное руководство по продуктовым карточкам](../PRODUCT_CARDS_COMPLETE.md)
-- [Исправления навигации](../NAVIGATION_ERROR.md)
+- [Текущее состояние каталога](./catalog/CURRENT_STATE.md) **[НОВЫЙ]**
+- [Архитектура каталога](./catalog/ARCHITECTURE.md) **[НОВЫЙ]**
+- [Оптимизация каталога](./catalog/PERFORMANCE.md) **[НОВЫЙ]**
+- [История изменений каталога](./catalog/CHANGELOG.md) **[НОВЫЙ]**
 - [Техническая спецификация](./implementation/TECH_SPEC.md)
 - [Лог разработки статей](./development/ARTICLES_DEVELOPMENT_LOG.md)
-- [API компонентов](./product-cards/REFERENCE_COMPONENTS.md)
