@@ -22,13 +22,29 @@ import {
     setFilter
 } from './store/slices/contentSlice';
 
+// ✅ УСЛОВНЫЕ ИМПОРТЫ для оптимизаций
+let FlashList: any;
+let PagerView: any;
+
+try {
+    FlashList = require('@shopify/flash-list').FlashList;
+} catch (e) {
+    console.log('[Products] FlashList not installed, using FlatList');
+}
+
+try {
+    PagerView = require('react-native-pager-view').default;
+} catch (e) {
+    console.log('[Products] PagerView not installed, using FlatList for galleries');
+}
+
 // ✅ FEATURE FLAGS для безопасного внедрения оптимизаций
 const ENABLE_OPTIMIZATIONS = {
-    useFlashList: false,      // Включить FlashList вместо FlatList
-    usePagerView: false,      // Включить PagerView вместо FlatList в галерее
-    useWeakMapCache: true,    // Использовать WeakMap для селекторов
-    useProgressiveImages: false, // Прогрессивная загрузка изображений
-    enableMetrics: __DEV__,   // Метрики производительности в dev режиме
+    useFlashList: !!FlashList,      // Автоматически включается если установлен
+    usePagerView: !!PagerView,      // Автоматически включается если установлен
+    useWeakMapCache: true,          // Используем оптимизированный кеш
+    useProgressiveImages: true,     // Прогрессивная загрузка изображений
+    enableMetrics: __DEV__,         // Метрики производительности в dev режиме
 };
 
 // ✅ Метрики производительности (только в dev)
@@ -142,17 +158,40 @@ const useCartItem = (productId: string) => {
 };
 
 
-// ✅ МЕМОИЗИРОВАННЫЙ КОМПОНЕНТ ГАЛЕРЕИ ИЗОБРАЖЕНИЙ
-const GalleryImage = React.memo(({ imageUrl, isActive }: { imageUrl: string; isActive: boolean }) => (
-    <View style={styles.galleryImageContainer}>
-        <OptimizedImage
-            source={{ uri: imageUrl }}
-            style={styles.galleryImage}
-            contentFit="cover"
-            priority={isActive ? 'high' : 'normal'}
-        />
-    </View>
-), (prevProps, nextProps) => {
+// ✅ ОПТИМИЗИРОВАННЫЙ КОМПОНЕНТ ИЗОБРАЖЕНИЯ с прогрессивной загрузкой
+const GalleryImage = React.memo(({ imageUrl, isActive }: { imageUrl: string; isActive: boolean }) => {
+    const [isLoaded, setIsLoaded] = React.useState(false);
+    
+    // ✅ Оптимизация URL для разных размеров
+    const optimizedUrl = React.useMemo(() => {
+        if (ENABLE_OPTIMIZATIONS.useProgressiveImages && imageUrl.includes('supabase')) {
+            const size = isActive ? 'card' : 'thumb';
+            const params = size === 'card' 
+                ? '?width=300&height=375&quality=80&format=webp'
+                : '?width=150&height=188&quality=60&format=webp';
+            return imageUrl + params;
+        }
+        return imageUrl;
+    }, [imageUrl, isActive]);
+
+    return (
+        <View style={styles.galleryImageContainer}>
+            {/* Placeholder с blur эффектом */}
+            {ENABLE_OPTIMIZATIONS.useProgressiveImages && !isLoaded && (
+                <View style={[styles.galleryImage, styles.imagePlaceholder]} />
+            )}
+            
+            <OptimizedImage
+                source={{ uri: optimizedUrl }}
+                style={[styles.galleryImage, { opacity: isLoaded ? 1 : 0 }]}
+                contentFit="cover"
+                priority={isActive ? 'high' : 'normal'}
+                onLoad={() => setIsLoaded(true)}
+                transition={200}
+            />
+        </View>
+    );
+}, (prevProps, nextProps) => {
     return prevProps.imageUrl === nextProps.imageUrl && prevProps.isActive === nextProps.isActive;
 });
 GalleryImage.displayName = 'GalleryImage';
@@ -179,7 +218,7 @@ const PaginationDots = React.memo(({ images, activeIndex }: { images: string[]; 
 });
 PaginationDots.displayName = 'PaginationDots';
 
-// ✅ МЕМОИЗИРОВАННЫЙ КОМПОНЕНТ ГАЛЕРЕИ
+// ✅ ОПТИМИЗИРОВАННЫЙ КОМПОНЕНТ ГАЛЕРЕИ с PagerView
 const ProductGallery = React.memo(({
     images,
     activeIndex,
@@ -191,9 +230,18 @@ const ProductGallery = React.memo(({
     onIndexChange: (index: number) => void;
     onPress: () => void;
 }) => {
-    const flatListRef = React.useRef<FlatList>(null);
+    const pagerRef = React.useRef<any>(null);
+    const shouldUsePagerView = ENABLE_OPTIMIZATIONS.usePagerView && PagerView;
 
-    // ✅ ОПТИМИЗИРОВАННЫЙ обработчик скролла изображений
+    // ✅ Обработчик для PagerView
+    const handlePageSelected = useCallback((e: any) => {
+        const newIndex = e.nativeEvent.position;
+        if (newIndex !== activeIndex) {
+            onIndexChange(newIndex);
+        }
+    }, [activeIndex, onIndexChange]);
+
+    // ✅ Обработчик для FlatList (fallback)
     const handleImageScroll = useCallback((event: any) => {
         const newIndex = Math.round(event.nativeEvent.contentOffset.x / GRID_CARD_WIDTH);
         if (newIndex !== activeIndex && newIndex >= 0 && newIndex < images.length) {
@@ -201,35 +249,16 @@ const ProductGallery = React.memo(({
         }
     }, [activeIndex, onIndexChange, images.length]);
 
-    // ✅ НОВЫЙ: Обработчик для плавного обновления во время скролла
-    const handleScrollProgress = useCallback((event: any) => {
-        const offsetX = event.nativeEvent.contentOffset.x;
-        const newIndex = Math.round(offsetX / GRID_CARD_WIDTH);
-        if (newIndex !== activeIndex && newIndex >= 0 && newIndex < images.length) {
-            onIndexChange(newIndex);
-        }
-    }, [activeIndex, onIndexChange, images.length]);
-
-    // ✅ ОПТИМИЗИРОВАННЫЙ рендер одного изображения в галерее
+    // ✅ Рендер изображения для обоих вариантов
     const renderGalleryImage = useCallback(({ item: imageUrl, index }: { item: string; index: number }) => (
         <GalleryImage imageUrl={imageUrl} isActive={index === activeIndex} />
     ), [activeIndex]);
 
-    // ✅ ОПТИМИЗИРОВАННЫЙ keyExtractor для галереи
-    const galleryKeyExtractor = useCallback((_: string, index: number) => `gallery-img-${index}`, []);
-
-    // ✅ ОПТИМИЗИРОВАННЫЙ getItemLayout для галереи
-    const galleryGetItemLayout = useCallback((_: any, index: number) => ({
-        length: GRID_CARD_WIDTH,
-        offset: GRID_CARD_WIDTH * index,
-        index,
-    }), []);
-
-    // ✅ Создаем жесты для одновременной работы тапа и свайпа
+    // ✅ Жест для тапа (работает с обоими вариантами)
     const tapGesture = React.useMemo(() =>
         Gesture.Tap()
-            .maxDuration(200)          // Уменьшаем время для быстрого тапа
-            .maxDistance(5)            // Уменьшаем дистанцию для точного тапа
+            .maxDuration(200)
+            .maxDistance(5)
             .runOnJS(true)
             .onEnd((_event, success) => {
                 if (success) {
@@ -238,47 +267,72 @@ const ProductGallery = React.memo(({
             })
         , [onPress]);
 
-    // ✅ ИСПРАВЛЕНО: Настраиваем Pan жест для работы с snapToInterval
-    const panGesture = React.useMemo(() =>
-        Gesture.Pan()
-            .activeOffsetX([-15, 15])  // Увеличиваем порог для активации
-            .failOffsetY([-15, 15])    // Увеличиваем порог для отмены
-            .minDistance(10)           // Минимальная дистанция для активации
-        , []);
+    // ✅ ОПТИМИЗИРОВАННЫЙ РЕНДЕР
+    if (shouldUsePagerView) {
+        return (
+            <>
+                <GestureDetector gesture={tapGesture}>
+                    <View style={styles.imageContainer}>
+                        {images && images.length > 0 ? (
+                            <PagerView
+                                ref={pagerRef}
+                                style={styles.galleryContainer}
+                                initialPage={activeIndex}
+                                onPageSelected={handlePageSelected}
+                                overdrag={false}
+                                offscreenPageLimit={1} // Рендерим только соседние страницы
+                            >
+                                {images.map((imageUrl, index) => (
+                                    <View key={`page-${index}`} style={styles.galleryImageContainer}>
+                                        <OptimizedImage
+                                            source={{ uri: imageUrl }}
+                                            style={styles.galleryImage}
+                                            contentFit="cover"
+                                            priority={index === activeIndex ? 'high' : 'normal'}
+                                            width={GRID_CARD_WIDTH}
+                                            height={GRID_CARD_WIDTH * (5/4)}
+                                        />
+                                    </View>
+                                ))}
+                            </PagerView>
+                        ) : (
+                            <View style={styles.imagePlaceholder} />
+                        )}
+                    </View>
+                </GestureDetector>
+                <PaginationDots images={images} activeIndex={activeIndex} />
+            </>
+        );
+    }
 
-    // ✅ ИСПРАВЛЕНО: Возвращаем Simultaneous с правильными настройками
-    const composedGesture = React.useMemo(() =>
-        Gesture.Simultaneous(tapGesture, panGesture)
-        , [tapGesture, panGesture]);
-
+    // ✅ FALLBACK на FlatList если PagerView недоступен
     return (
         <>
-            <GestureDetector gesture={composedGesture}>
+            <GestureDetector gesture={tapGesture}>
                 <View style={styles.imageContainer}>
                     {images && images.length > 0 ? (
                         <View style={styles.galleryContainer}>
                             <FlatList
-                                ref={flatListRef}
                                 data={images}
                                 renderItem={renderGalleryImage}
-                                keyExtractor={galleryKeyExtractor}
+                                keyExtractor={(_, index) => `gallery-img-${index}`}
                                 horizontal
-                                // ✅ ИСПРАВЛЕНО: Заменяем pagingEnabled на snapToInterval для точной фиксации
                                 snapToInterval={GRID_CARD_WIDTH}
                                 snapToAlignment="start"
                                 disableIntervalMomentum={true}
                                 decelerationRate="fast"
                                 showsHorizontalScrollIndicator={false}
                                 onMomentumScrollEnd={handleImageScroll}
-                                onScroll={handleScrollProgress}
-                                getItemLayout={galleryGetItemLayout}
-                                // ✅ КРИТИЧЕСКИЕ ОПТИМИЗАЦИИ ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ
+                                getItemLayout={(_, index) => ({
+                                    length: GRID_CARD_WIDTH,
+                                    offset: GRID_CARD_WIDTH * index,
+                                    index,
+                                })}
                                 initialNumToRender={1}
                                 maxToRenderPerBatch={1}
                                 windowSize={3}
                                 removeClippedSubviews={true}
                                 scrollEventThrottle={16}
-                                // ✅ ДОПОЛНИТЕЛЬНЫЕ ОПТИМИЗАЦИИ ДЛЯ ГАЛЕРЕИ
                                 bounces={false}
                                 overScrollMode="never"
                                 nestedScrollEnabled={false}
@@ -289,8 +343,6 @@ const ProductGallery = React.memo(({
                     )}
                 </View>
             </GestureDetector>
-
-            {/* ✅ Пагинация под картинкой */}
             <PaginationDots images={images} activeIndex={activeIndex} />
         </>
     );
@@ -607,14 +659,28 @@ export default function ProductsScreen() {
         }
     }, [viewMode]);
 
-    // ✅ Метрики производительности
+    // ✅ Расширенные метрики производительности
     useEffect(() => {
         if (ENABLE_OPTIMIZATIONS.enableMetrics) {
-            console.log('[Products] Performance metrics:', {
-                itemsCount: filteredItems.length,
-                viewMode,
-                cacheSize: cartSelectorsCache instanceof SelectorCache ? 'LRU' : 'Map',
-                optimizations: ENABLE_OPTIMIZATIONS
+            const startTime = performance.now();
+            
+            // Измеряем время рендера
+            requestAnimationFrame(() => {
+                const renderTime = performance.now() - startTime;
+                console.log('[Products] Performance metrics:', {
+                    renderTime: `${renderTime.toFixed(2)}ms`,
+                    itemsCount: filteredItems.length,
+                    viewMode,
+                    listType: ENABLE_OPTIMIZATIONS.useFlashList ? 'FlashList' : 'FlatList',
+                    galleryType: ENABLE_OPTIMIZATIONS.usePagerView ? 'PagerView' : 'FlatList',
+                    cacheType: 'LRU with WeakMap',
+                    optimizations: {
+                        flashList: ENABLE_OPTIMIZATIONS.useFlashList,
+                        pagerView: ENABLE_OPTIMIZATIONS.usePagerView,
+                        progressiveImages: ENABLE_OPTIMIZATIONS.useProgressiveImages,
+                        weakMapCache: ENABLE_OPTIMIZATIONS.useWeakMapCache
+                    }
+                });
             });
         }
     }, [filteredItems.length, viewMode]);
@@ -632,7 +698,33 @@ export default function ProductsScreen() {
                 <View style={styles.loadingContainer}>
                     <Text>Loading products...</Text>
                 </View>
+            ) : ENABLE_OPTIMIZATIONS.useFlashList && FlashList ? (
+                // ✅ ОПТИМИЗИРОВАННЫЙ СПИСОК с FlashList
+                <FlashList
+                    data={filteredItems}
+                    renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
+                    keyExtractor={keyExtractor}
+                    numColumns={viewMode === 'grid' ? 2 : 1}
+                    key={`${viewMode}-${activeFilter}`}
+                    contentContainerStyle={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                    // ✅ СПЕЦИФИЧНЫЕ НАСТРОЙКИ FlashList
+                    estimatedItemSize={viewMode === 'grid' ? GRID_CARD_HEIGHT : LIST_CARD_HEIGHT}
+                    drawDistance={200} // Предзагрузка на 200px вперед
+                    recycleItems={true} // Переиспользование элементов
+                    overrideItemLayout={viewMode === 'grid' ? (layout, item, index, maxColumns) => {
+                        const row = Math.floor(index / 2);
+                        layout.size = GRID_CARD_HEIGHT;
+                        layout.offset = row * (GRID_CARD_HEIGHT + GRID_GAP);
+                    } : undefined}
+                    // ✅ ДОПОЛНИТЕЛЬНЫЕ ОПТИМИЗАЦИИ
+                    maintainVisibleContentPosition={{
+                        minIndexForVisible: 0,
+                        autoscrollToTopThreshold: 10
+                    }}
+                />
             ) : (
+                // ✅ FALLBACK на стандартный FlatList
                 <FlatList
                     data={filteredItems}
                     renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
@@ -643,11 +735,11 @@ export default function ProductsScreen() {
                     columnWrapperStyle={viewMode === 'grid' ? { marginBottom: 0, gap: GRID_GAP } : undefined}
                     showsVerticalScrollIndicator={false}
                     // ✅ ОПТИМИЗИРОВАННЫЕ НАСТРОЙКИ
-                    removeClippedSubviews={true}  // Включаем обратно для производительности
+                    removeClippedSubviews={true}
                     maxToRenderPerBatch={viewMode === 'grid' ? 6 : 8}
                     initialNumToRender={viewMode === 'grid' ? 8 : 10}
-                    windowSize={10}  // Увеличиваем для предзагрузки
-                    updateCellsBatchingPeriod={50}  // Уменьшаем для отзывчивости
+                    windowSize={10}
+                    updateCellsBatchingPeriod={50}
                     scrollEventThrottle={16}
                     getItemLayout={getOptimizedItemLayout}
                     // ✅ ДОПОЛНИТЕЛЬНЫЕ ОПТИМИЗАЦИИ
