@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 // Define a type for the slice state
 interface TimerState {
+    // Настройки таймера
     prep: number;
     work: number;
     rest: number;
@@ -10,32 +11,45 @@ interface TimerState {
     restBetweenSets: number;
     descWork: string;
     descRest: string;
+    
+    // Состояние выполнения
     phase: 'prep' | 'work' | 'rest' | 'restSet' | 'done';
-    intervalIdx: number;
-    setIdx: number;
-    seconds: number;
+    currentCycle: number;  // Текущий цикл (1-based)
+    currentSet: number;    // Текущий сет (1-based)
+    seconds: number;       // Оставшиеся секунды в текущей фазе
     running: boolean;
     auto: boolean;
-    totalIntervals: number;
+    
+    // Вычисляемые поля
+    totalCycles: number;
+    totalSets: number;
+    isFinished: boolean;
 }
 
 // Create the initial state
 const initialState: TimerState = {
+    // Настройки по умолчанию
     prep: 2,
     work: 60,
-    rest: 0,
+    rest: 30,
     cycles: 8,
     sets: 1,
-    restBetweenSets: 0,
+    restBetweenSets: 120,
     descWork: '',
     descRest: '',
+    
+    // Состояние выполнения
     phase: 'prep',
-    intervalIdx: 0,
-    setIdx: 0,
-    seconds: 2, // Initial seconds based on prep time
+    currentCycle: 0,
+    currentSet: 1,
+    seconds: 2, // Начинаем с prep времени
     running: false,
     auto: true,
-    totalIntervals: 8 // Initial calculation
+    
+    // Вычисляемые поля
+    totalCycles: 8,
+    totalSets: 1,
+    isFinished: false
 };
 
 export const timerSlice = createSlice({
@@ -62,11 +76,11 @@ export const timerSlice = createSlice({
         },
         setCycles: (state, action: PayloadAction<number>) => {
             state.cycles = action.payload;
-            state.totalIntervals = state.sets * action.payload + state.sets - 1;
+            state.totalCycles = action.payload;
         },
         setSets: (state, action: PayloadAction<number>) => {
             state.sets = action.payload;
-            state.totalIntervals = action.payload * state.cycles + action.payload - 1;
+            state.totalSets = action.payload;
         },
         setRestBetweenSets: (state, action: PayloadAction<number>) => {
             state.restBetweenSets = action.payload;
@@ -88,10 +102,11 @@ export const timerSlice = createSlice({
         },
         resetTimer: (state) => {
             state.phase = 'prep';
-            state.intervalIdx = 0;
-            state.setIdx = 0;
+            state.currentCycle = 0;
+            state.currentSet = 1;
             state.seconds = state.prep;
             state.running = false;
+            state.isFinished = false;
         },
         toggleAuto: (state) => {
             state.auto = !state.auto;
@@ -102,31 +117,94 @@ export const timerSlice = createSlice({
             }
         },
         nextPhase: (state) => {
+            console.log(`🔄 Переход из фазы ${state.phase}, цикл ${state.currentCycle}/${state.cycles}, сет ${state.currentSet}/${state.sets}`);
+            
             if (state.phase === 'prep') {
+                // Из подготовки переходим к работе
                 state.phase = 'work';
                 state.seconds = state.work;
-                state.intervalIdx = 1;
+                state.currentCycle = 1;
+                console.log('✅ Переход: prep → work');
+                
             } else if (state.phase === 'work') {
-                if (state.cycles > 1 && state.intervalIdx < state.cycles) {
+                // Из работы переходим к отдыху или к следующему сету/завершению
+                if (state.currentCycle < state.cycles) {
+                    // Еще есть циклы в текущем сете
                     state.phase = 'rest';
                     state.seconds = state.rest;
-                } else if (state.setIdx < state.sets - 1) {
-                    state.phase = 'restSet';
-                    state.seconds = state.restBetweenSets;
+                    console.log('✅ Переход: work → rest');
                 } else {
-                    state.phase = 'done';
-                    state.running = false;
+                    // Закончили все циклы в сете
+                    if (state.currentSet < state.sets) {
+                        // Переходим к отдыху между сетами
+                        state.phase = 'restSet';
+                        state.seconds = state.restBetweenSets;
+                        console.log('✅ Переход: work → restSet');
+                    } else {
+                        // Все сеты завершены
+                        state.phase = 'done';
+                        state.running = false;
+                        state.isFinished = true;
+                        console.log('✅ Переход: work → done (тренировка завершена)');
+                    }
                 }
-                state.intervalIdx = state.intervalIdx + 1;
+                
             } else if (state.phase === 'rest') {
+                // Из отдыха переходим к следующему циклу работы
                 state.phase = 'work';
                 state.seconds = state.work;
+                state.currentCycle = state.currentCycle + 1;
+                console.log('✅ Переход: rest → work');
+                
             } else if (state.phase === 'restSet') {
-                state.setIdx = state.setIdx + 1;
-                state.intervalIdx = 1;
+                // Из отдыха между сетами переходим к новому сету
+                state.currentSet = state.currentSet + 1;
+                state.currentCycle = 1;
                 state.phase = 'work';
                 state.seconds = state.work;
+                console.log('✅ Переход: restSet → work (новый сет)');
             }
+            
+            console.log(`📊 Новое состояние: фаза=${state.phase}, цикл=${state.currentCycle}/${state.cycles}, сет=${state.currentSet}/${state.sets}, секунды=${state.seconds}`);
+        },
+        
+        // Установка полной конфигурации (для загрузки из URL params)
+        setTimerConfig: (state, action: PayloadAction<{
+            prep?: number;
+            work?: number;
+            rest?: number;
+            cycles?: number;
+            sets?: number;
+            restBetweenSets?: number;
+            descWork?: string;
+            descRest?: string;
+        }>) => {
+            const config = action.payload;
+            
+            if (config.prep !== undefined) state.prep = config.prep;
+            if (config.work !== undefined) state.work = config.work;
+            if (config.rest !== undefined) state.rest = config.rest;
+            if (config.cycles !== undefined) {
+                state.cycles = config.cycles;
+                state.totalCycles = config.cycles;
+            }
+            if (config.sets !== undefined) {
+                state.sets = config.sets;
+                state.totalSets = config.sets;
+            }
+            if (config.restBetweenSets !== undefined) state.restBetweenSets = config.restBetweenSets;
+            if (config.descWork !== undefined) state.descWork = config.descWork;
+            if (config.descRest !== undefined) state.descRest = config.descRest;
+            
+            // Сбрасываем таймер после изменения конфигурации
+            state.phase = 'prep';
+            state.currentCycle = 0;
+            state.currentSet = 1;
+            state.seconds = state.prep;
+            state.running = false;
+            state.isFinished = false;
+            
+            console.log('🔧 Конфигурация таймера обновлена:', config);
         }
     }
 });
@@ -145,7 +223,8 @@ export const {
     resetTimer,
     toggleAuto,
     decrementSeconds,
-    nextPhase
+    nextPhase,
+    setTimerConfig
 } = timerSlice.actions;
 
 export default timerSlice.reducer; 

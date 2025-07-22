@@ -13,7 +13,7 @@ import {
     toggleSelectAll,
     updateQuantity
 } from '../app/store/slices/cartSlice';
-import { ProductItem } from '../app/store/slices/productsSlice';
+import { ProductItem } from '../app/store/slices/contentSlice';
 
 /**
  * ✅ ОПТИМИЗИРОВАННЫЙ ХУК ДЛЯ РАБОТЫ С КОРЗИНОЙ

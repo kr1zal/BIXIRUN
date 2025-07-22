@@ -1,44 +1,9 @@
-import { useEffect } from 'react';
-import { Platform, Vibration } from 'react-native';
-import { useAppDispatch, useAppSelector } from '../app/store/hooks';
-import {
-    decrementSeconds,
-    nextPhase,
-    pauseTimer,
-    resetTimer,
-    startTimer
-} from '../app/store/slices/timerSlice';
-import { playBeep } from '../app/utils/sound';
+import { useAppSelector } from '../app/store/hooks';
 
 export const useTimer = () => {
-    const dispatch = useAppDispatch();
     const timer = useAppSelector((state) => state.timer);
 
-    // Основной таймер
-    useEffect(() => {
-        if (!timer.running) return;
-
-        const id = setInterval(() => {
-            if (timer.seconds > 0) {
-                dispatch(decrementSeconds());
-            } else {
-                dispatch(nextPhase());
-
-                // Вибрация и звук при смене фазы
-                if (Platform.OS === 'ios' || Platform.OS === 'android') {
-                    Vibration.vibrate(500);
-                }
-                playBeep().catch(console.error);
-            }
-        }, 1000);
-
-        return () => clearInterval(id);
-    }, [timer.running, timer.seconds, dispatch]);
-
-    // Функции управления таймером
-    const start = () => dispatch(startTimer());
-    const pause = () => dispatch(pauseTimer());
-    const reset = () => dispatch(resetTimer());
+    // ❌ УБИРАЕМ useEffect с интервалом - логика таймера только в компонентах
 
     // Вычисление прогресса
     const getMaxValue = () => {
@@ -76,17 +41,14 @@ export const useTimer = () => {
     const getProgressText = () => {
         if (timer.phase === 'done') return 'Тренировка завершена';
 
-        const currentInterval = timer.intervalIdx === 0 ? '' : `Интервал ${timer.intervalIdx}/${timer.cycles}`;
-        const currentSet = timer.sets <= 1 ? '' : `Сет ${timer.setIdx + 1}/${timer.sets}`;
+        const currentInterval = timer.currentCycle === 0 ? '' : `Интервал ${timer.currentCycle}/${timer.cycles}`;
+        const currentSet = timer.sets <= 1 ? '' : `Сет ${timer.currentSet}/${timer.sets}`;
 
         return [currentInterval, currentSet].filter(Boolean).join(' • ');
     };
 
     return {
         timer,
-        start,
-        pause,
-        reset,
         progress,
         maxValue,
         getPhaseInfo,

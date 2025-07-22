@@ -8,7 +8,7 @@ import { StyleSheet, View } from 'react-native';
 export default function App() {
     return (
         <View style={styles.container}>
-            <ExpoRoot context={require.context('./app')} />
+            <ExpoRoot context={(require as any).context('./app')} />
             {/* <SyncManager /> */}
         </View>
     );

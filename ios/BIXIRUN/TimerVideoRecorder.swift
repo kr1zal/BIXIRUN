@@ -505,39 +505,24 @@ class TimerVideoRecorder: NSObject {
         }
     }
     
-    // ИСПРАВЛЕННОЕ НАЛОЖЕНИЕ ТАЙМЕРА
+    // ✅ УПРОЩЕННОЕ НАЛОЖЕНИЕ ТАЙМЕРА - БЕЗ БЛОКИРОВКИ UI
     private func addTimerOverlay(to pixelBuffer: CVPixelBuffer) {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        
         // ИСПРАВЛЕНИЕ: Проверяем формат pixel buffer
         let pixelFormat = CVPixelBufferGetPixelFormatType(pixelBuffer)
         guard pixelFormat == kCVPixelFormatType_32BGRA || pixelFormat == kCVPixelFormatType_32ARGB else {
-            print("❌ Неподдерживаемый формат pixel buffer: \(pixelFormat)")
-            return
+            return // Тихо возвращаемся при неподдерживаемом формате
         }
         
         CVPixelBufferLockBaseAddress(pixelBuffer, [])
-        defer { 
-            CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
-            let endTime = CFAbsoluteTimeGetCurrent()
-            let timeElapsed = endTime - startTime
-            if timeElapsed > 0.016 { // Больше 16ms - проблема
-                print("⚠️ Наложение таймера заняло \(timeElapsed * 1000)ms")
-            }
-        }
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, []) }
         
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
         
-        // ИСПРАВЛЕНИЕ: Проверяем параметры перед созданием контекста
-        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else {
-            print("❌ Не удалось получить базовый адрес pixel buffer")
-            return
-        }
-        
+        guard let baseAddress = CVPixelBufferGetBaseAddress(pixelBuffer) else { return }
         let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
         
-        // ИСПРАВЛЕНИЕ: Создаем контекст с правильными параметрами
+        // Создаем контекст
         guard let context = CGContext(
             data: baseAddress,
             width: width,
@@ -546,47 +531,33 @@ class TimerVideoRecorder: NSObject {
             bytesPerRow: bytesPerRow,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue
-        ) else {
-            print("❌ Не удалось создать контекст для наложения таймера")
-            return
-        }
+        ) else { return }
         
-        // ИСПРАВЛЕНИЕ: Проверяем валидность контекста
-        guard context.width > 0 && context.height > 0 else {
-            print("❌ Контекст имеет нулевые размеры")
-            return
-        }
+        guard context.width > 0 && context.height > 0 else { return }
         
-        // Переворачиваем контекст для правильного отображения
+        // Переворачиваем контекст
         context.translateBy(x: 0, y: CGFloat(height))
         context.scaleBy(x: 1.0, y: -1.0)
         
-        // БОЛЬШАЯ ПОДЛОЖКА для таймера
+        // УПРОЩЕННАЯ подложка для таймера
         let overlayRect = CGRect(
-            x: CGFloat(width) * 0.05,
-            y: CGFloat(height) * 0.75,
-            width: CGFloat(width) * 0.9,
-            height: CGFloat(height) * 0.2
+            x: CGFloat(width) * 0.1,
+            y: CGFloat(height) * 0.8,
+            width: CGFloat(width) * 0.8,
+            height: CGFloat(height) * 0.15
         )
         
-        // Рисуем полупрозрачную подложку
-        context.setFillColor(UIColor.black.withAlphaComponent(0.8).cgColor)
+        // Рисуем подложку
+        context.setFillColor(UIColor.black.withAlphaComponent(0.7).cgColor)
         context.fill(overlayRect)
         
-        // Рисуем рамку
-        context.setStrokeColor(UIColor.white.cgColor)
-        context.setLineWidth(3.0)
-        context.stroke(overlayRect)
-        
-        // ОЧЕНЬ БОЛЬШОЙ ТАЙМЕР
-        let timerFontSize: CGFloat = min(CGFloat(width) * 0.12, 80.0)
+        // УПРОЩЕННЫЙ ТАЙМЕР - только основной текст
+        let timerFontSize: CGFloat = min(CGFloat(width) * 0.08, 60.0)
         let timerFont = UIFont.boldSystemFont(ofSize: timerFontSize)
         
         let timerAttributes: [NSAttributedString.Key: Any] = [
             .font: timerFont,
-            .foregroundColor: UIColor.white,
-            .strokeColor: UIColor.black,
-            .strokeWidth: -6.0
+            .foregroundColor: UIColor.white
         ]
         
         let timerSize = timerText.size(withAttributes: timerAttributes)
@@ -596,36 +567,6 @@ class TimerVideoRecorder: NSObject {
         )
         
         timerText.draw(at: timerPoint, withAttributes: timerAttributes)
-        
-        // ФАЗА И ПРОГРЕСС
-        let phaseFontSize: CGFloat = min(CGFloat(width) * 0.06, 40.0)
-        let phaseFont = UIFont.systemFont(ofSize: phaseFontSize, weight: .semibold)
-        
-        let phaseAttributes: [NSAttributedString.Key: Any] = [
-            .font: phaseFont,
-            .foregroundColor: UIColor.white,
-            .strokeColor: UIColor.black,
-            .strokeWidth: -3.0
-        ]
-        
-        let phaseSize = phaseText.size(withAttributes: phaseAttributes)
-        let phasePoint = CGPoint(
-            x: overlayRect.midX - phaseSize.width / 2,
-            y: overlayRect.minY + 10
-        )
-        
-        phaseText.draw(at: phasePoint, withAttributes: phaseAttributes)
-        
-        // Прогресс внизу
-        let progressSize = progressText.size(withAttributes: phaseAttributes)
-        let progressPoint = CGPoint(
-            x: overlayRect.midX - progressSize.width / 2,
-            y: overlayRect.maxY - progressSize.height - 10
-        )
-        
-        progressText.draw(at: progressPoint, withAttributes: phaseAttributes)
-        
-        // Убираем избыточный print - только при проблемах с производительностью
     }
     
     // MARK: - Recording Methods

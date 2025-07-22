@@ -4,14 +4,7 @@ import {
     nextPhase,
     pauseTimer,
     resetTimer,
-    setCycles,
-    setDescRest,
-    setDescWork,
-    setPrep,
-    setRest,
-    setRestBetweenSets,
-    setSets,
-    setWork,
+    setTimerConfig,
     startTimer
 } from '@/app/store/slices/timerSlice';
 import * as MediaLibrary from 'expo-media-library';
@@ -92,49 +85,26 @@ export default function TimerWorkout() {
         checkPermissions();
     }, []);
 
-    // Инициализация таймера с параметрами из URL - ТОЛЬКО ОДИН РАЗ
+    // ✅ ИСПРАВЛЕННАЯ инициализация таймера - ОДИН раз через setTimerConfig
     useEffect(() => {
         console.log('🔧 Инициализация таймера с параметрами:', params);
 
-        if (params.prep) {
-            console.log('⏱️ Устанавливаем prep:', params.prep);
-            dispatch(setPrep(Number(params.prep)));
-        }
-        if (params.work) {
-            console.log('💪 Устанавливаем work:', params.work);
-            dispatch(setWork(Number(params.work)));
-        }
-        if (params.rest) {
-            console.log('😴 Устанавливаем rest:', params.rest);
-            dispatch(setRest(Number(params.rest)));
-        }
-        if (params.cycles) {
-            console.log('🔄 Устанавливаем cycles:', params.cycles);
-            dispatch(setCycles(Number(params.cycles)));
-        }
-        if (params.sets) {
-            console.log('📊 Устанавливаем sets:', params.sets);
-            dispatch(setSets(Number(params.sets)));
-        }
-        if (params.restBetweenSets) {
-            console.log('⏳ Устанавливаем restBetweenSets:', params.restBetweenSets);
-            dispatch(setRestBetweenSets(Number(params.restBetweenSets)));
-        }
-        if (params.descWork) {
-            console.log('📝 Устанавливаем descWork:', params.descWork);
-            dispatch(setDescWork(String(params.descWork)));
-        }
-        if (params.descRest) {
-            console.log('📝 Устанавливаем descRest:', params.descRest);
-            dispatch(setDescRest(String(params.descRest)));
-        }
+        const config = {
+            prep: params.prep ? Number(params.prep) : undefined,
+            work: params.work ? Number(params.work) : undefined,
+            rest: params.rest ? Number(params.rest) : undefined,
+            cycles: params.cycles ? Number(params.cycles) : undefined,
+            sets: params.sets ? Number(params.sets) : undefined,
+            restBetweenSets: params.restBetweenSets ? Number(params.restBetweenSets) : undefined,
+            descWork: params.descWork ? String(params.descWork) : undefined,
+            descRest: params.descRest ? String(params.descRest) : undefined,
+        };
 
-        // Сбрасываем таймер ТОЛЬКО при первой загрузке
-        console.log('🔄 Сбрасываем таймер ТОЛЬКО при первой загрузке');
-        dispatch(resetTimer());
+        // Устанавливаем конфигурацию ОДНИМ действием
+        dispatch(setTimerConfig(config));
 
         console.log('✅ Инициализация завершена');
-    }, []); // УБИРАЕМ params и dispatch из зависимостей!
+    }, []); // Пустой массив зависимостей - выполняется ТОЛЬКО один раз
 
     // Интервал для обновления таймера
     useInterval(() => {
@@ -232,7 +202,7 @@ export default function TimerWorkout() {
                 const config = {
                     timerText: formatTime(timerState.seconds),
                     phaseText: phaseInfo.name,
-                    progressText: `${timerState.intervalIdx}/${timerState.cycles} • Сет ${timerState.setIdx + 1}`,
+                    progressText: `${timerState.currentCycle}/${timerState.cycles} • Сет ${timerState.currentSet}`,
                     fontSize: 48,
                     fontColor: '#ffffff',
                     backgroundColor: 'rgba(0,0,0,0.8)',
@@ -360,7 +330,7 @@ export default function TimerWorkout() {
         (timerState.phase === 'rest' || timerState.phase === 'restSet') ? timerState.descRest :
             undefined;
 
-    const isTimerFinished = timerState.phase === 'done';
+    const isTimerFinished = timerState.isFinished;
 
     // Обновление таймера в нативном модуле во время записи
     useEffect(() => {
@@ -370,18 +340,18 @@ export default function TimerWorkout() {
                 TimerVideoRecorder.updateTimer({
                     timerText: formatTime(timerState.seconds),
                     phaseText: phaseInfo.name,
-                    progressText: `${timerState.intervalIdx}/${timerState.cycles} • Сет ${timerState.setIdx + 1}`
+                    progressText: `${timerState.currentCycle}/${timerState.cycles} • Сет ${timerState.currentSet}`
                 });
                 console.log('🔄 Обновили таймер в видео:', {
                     time: formatTime(timerState.seconds),
                     phase: phaseInfo.name,
-                    progress: `${timerState.intervalIdx}/${timerState.cycles} • Сет ${timerState.setIdx + 1}`
+                    progress: `${timerState.currentCycle}/${timerState.cycles} • Сет ${timerState.currentSet}`
                 });
             } catch (error) {
                 console.error('❌ Ошибка обновления таймера:', error);
             }
         }
-    }, [isRecording, timerState.seconds, timerState.phase, timerState.intervalIdx, timerState.cycles, timerState.setIdx, formatTime, getPhaseInfo]);
+    }, [isRecording, timerState.seconds, timerState.phase, timerState.currentCycle, timerState.cycles, timerState.currentSet, formatTime, getPhaseInfo]);
 
     // Переключение камеры
     const handleCameraFlip = useCallback(async () => {
@@ -474,7 +444,7 @@ export default function TimerWorkout() {
                     <Text style={styles.cameraTimerText}>{formatTime(timerState.seconds)}</Text>
                     <Text style={styles.cameraPhaseText}>{phaseInfo.name}</Text>
                     <Text style={styles.cameraProgressText}>
-                        {timerState.intervalIdx}/{timerState.cycles} • Сет {timerState.setIdx + 1}
+                        {timerState.currentCycle}/{timerState.cycles} • Сет {timerState.currentSet}
                     </Text>
                 </View>
             )}
@@ -513,7 +483,7 @@ export default function TimerWorkout() {
                                 <Text style={styles.timerDescription}>{currentDescription}</Text>
                             )}
                             <Text style={styles.progressText}>
-                                Интервал {timerState.intervalIdx} / Сет {timerState.setIdx + 1}
+                                Интервал {timerState.currentCycle} / Сет {timerState.currentSet}
                             </Text>
                         </View>
                     </View>
