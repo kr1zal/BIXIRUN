@@ -22,20 +22,6 @@ import {
     setFilter
 } from './store/slices/contentSlice';
 
-// ✅ FEATURE FLAGS для безопасного внедрения оптимизаций
-const ENABLE_OPTIMIZATIONS = {
-    useFlashList: false,      // Включить FlashList вместо FlatList
-    usePagerView: false,      // Включить PagerView вместо FlatList в галерее
-    useWeakMapCache: true,    // Использовать WeakMap для селекторов
-    useProgressiveImages: false, // Прогрессивная загрузка изображений
-    enableMetrics: __DEV__,   // Метрики производительности в dev режиме
-};
-
-// ✅ Метрики производительности (только в dev)
-if (ENABLE_OPTIMIZATIONS.enableMetrics) {
-    console.log('[Products] Feature flags:', ENABLE_OPTIMIZATIONS);
-}
-
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_GAP = 3;
 const GRID_CARD_WIDTH = (SCREEN_WIDTH - GRID_GAP * 3) / 2;
@@ -57,89 +43,18 @@ const makeSelectCartItem = () =>
         (cartItems, productId) => cartItems.find((item: CartItem) => item.product.id === productId)
     );
 
-// ✅ ОПТИМИЗИРОВАННЫЙ КЕШ СЕЛЕКТОРОВ с LRU и WeakMap
-class SelectorCache {
-    private cache: Map<string, ReturnType<typeof makeSelectCartItem>> = new Map();
-    private usage: Map<string, number> = new Map();
-    private maxSize = 100;
-
-    get(productId: string): ReturnType<typeof makeSelectCartItem> {
-        if (!this.cache.has(productId)) {
-            // Если кеш переполнен, удаляем наименее используемый
-            if (this.cache.size >= this.maxSize) {
-                const leastUsed = Array.from(this.usage.entries())
-                    .sort((a, b) => a[1] - b[1])[0];
-                if (leastUsed) {
-                    this.cache.delete(leastUsed[0]);
-                    this.usage.delete(leastUsed[0]);
-                }
-            }
-            this.cache.set(productId, makeSelectCartItem());
-        }
-        
-        // Обновляем счетчик использования
-        this.usage.set(productId, Date.now());
-        return this.cache.get(productId)!;
-    }
-
-    clear() {
-        this.cache.clear();
-        this.usage.clear();
-    }
-}
-
-// ✅ Используем WeakMap для автоматической очистки при unmount компонентов
-const cartSelectorsCache = ENABLE_OPTIMIZATIONS.useWeakMapCache 
-    ? new SelectorCache() 
-    : new Map<string, ReturnType<typeof makeSelectCartItem>>();
+// ✅ КЭШИРУЕМ СЕЛЕКТОРЫ ДЛЯ КАЖДОГО ТОВАРА
+const cartSelectors = new Map<string, ReturnType<typeof makeSelectCartItem>>();
 
 const getCartItemSelector = (productId: string) => {
-    if (ENABLE_OPTIMIZATIONS.useWeakMapCache) {
-        return (cartSelectorsCache as SelectorCache).get(productId);
-    } else {
-        // Старая логика для обратной совместимости
-        if (!cartSelectorsCache.has(productId)) {
-            cartSelectorsCache.set(productId, makeSelectCartItem());
-        }
-        return cartSelectorsCache.get(productId)!;
+    if (!cartSelectors.has(productId)) {
+        cartSelectors.set(productId, makeSelectCartItem());
     }
+    return cartSelectors.get(productId)!;
 };
 
 // Удален неиспользуемый компонент QuantityCounter
 
-// ✅ КАСТОМНЫЙ ХУК для изоляции обновлений корзины
-const useCartItem = (productId: string) => {
-    const selector = useMemo(
-        () => getCartItemSelector(productId),
-        [productId]
-    );
-    
-    const cartItem = useAppSelector(state => selector(state, productId));
-    const dispatch = useAppDispatch();
-    
-    const handlers = useMemo(() => ({
-        increment: () => {
-            const currentQty = cartItem?.quantity || 0;
-            dispatch(updateQuantity({ productId, quantity: currentQty + 1 }));
-        },
-        decrement: () => {
-            const currentQty = cartItem?.quantity || 0;
-            if (currentQty === 1) {
-                dispatch(removeFromCart(productId));
-            } else {
-                dispatch(updateQuantity({ productId, quantity: currentQty - 1 }));
-            }
-        },
-        addToCart: (product: ProductItem) => {
-            dispatch(addToCart({ product, quantity: 1 }));
-        }
-    }), [productId, cartItem?.quantity, dispatch]);
-    
-    return {
-        quantity: cartItem?.quantity || 0,
-        ...handlers
-    };
-};
 
 
 // ✅ МЕМОИЗИРОВАННЫЙ КОМПОНЕНТ ГАЛЕРЕИ ИЗОБРАЖЕНИЙ
@@ -380,16 +295,32 @@ CartButtons.displayName = 'CartButtons';
 
 // Memoized grid item component
 const GridItem = React.memo(({ item, onPress }: CardProps) => {
-    // ✅ ОПТИМИЗИРОВАНО: Используем новый хук для изоляции обновлений
-    const { quantity, increment, decrement, addToCart } = useCartItem(item.id);
+    const dispatch = useAppDispatch();
+
+    // ✅ ИСПРАВЛЕНО: Используем мемоизированный селектор
+    const selectCartItem = useMemo(() => getCartItemSelector(item.id), [item.id]);
+    const cartItem = useAppSelector(state => selectCartItem(state, item.id));
+    const quantity = cartItem?.quantity || 0;
 
     // ✅ Состояние для отслеживания активного изображения
     const [activeImageIndex, setActiveImageIndex] = React.useState(0);
 
     // ✅ Мемоизированные callback'и для корзины
-    const handleIncrement = useCallback(() => increment(), [increment]);
-    const handleDecrement = useCallback(() => decrement(), [decrement]);
-    const handleAddToCart = useCallback(() => addToCart(item), [addToCart, item]);
+    const handleIncrement = useCallback(() => {
+        dispatch(updateQuantity({ productId: item.id, quantity: quantity + 1 }));
+    }, [dispatch, item.id, quantity]);
+
+    const handleDecrement = useCallback(() => {
+        if (quantity === 1) {
+            dispatch(removeFromCart(item.id));
+        } else {
+            dispatch(updateQuantity({ productId: item.id, quantity: quantity - 1 }));
+        }
+    }, [dispatch, item.id, quantity]);
+
+    const handleAddToCart = useCallback(() => {
+        dispatch(addToCart({ product: item, quantity: 1 }));
+    }, [dispatch, item]);
 
     // ✅ Мемоизированный обработчик изменения индекса
     const handleIndexChange = useCallback((newIndex: number) => {
@@ -434,13 +365,29 @@ GridItem.displayName = 'GridItem';
 
 // Memoized list item component
 const ListItem = React.memo(({ item, onPress }: CardProps) => {
-    // ✅ ОПТИМИЗИРОВАНО: Используем новый хук для изоляции обновлений
-    const { quantity, increment, decrement, addToCart } = useCartItem(item.id);
+    const dispatch = useAppDispatch();
+
+    // ✅ ИСПРАВЛЕНО: Используем мемоизированный селектор
+    const selectCartItem = useMemo(() => getCartItemSelector(item.id), [item.id]);
+    const cartItem = useAppSelector(state => selectCartItem(state, item.id));
+    const quantity = cartItem?.quantity || 0;
 
     // ✅ Мемоизированные callback'и для корзины
-    const handleIncrement = useCallback(() => increment(), [increment]);
-    const handleDecrement = useCallback(() => decrement(), [decrement]);
-    const handleAddToCart = useCallback(() => addToCart(item), [addToCart, item]);
+    const handleIncrement = useCallback(() => {
+        dispatch(updateQuantity({ productId: item.id, quantity: quantity + 1 }));
+    }, [dispatch, item.id, quantity]);
+
+    const handleDecrement = useCallback(() => {
+        if (quantity === 1) {
+            dispatch(removeFromCart(item.id));
+        } else {
+            dispatch(updateQuantity({ productId: item.id, quantity: quantity - 1 }));
+        }
+    }, [dispatch, item.id, quantity]);
+
+    const handleAddToCart = useCallback(() => {
+        dispatch(addToCart({ product: item, quantity: 1 }));
+    }, [dispatch, item]);
 
     return (
         <View style={styles.listCard}>
@@ -586,39 +533,6 @@ export default function ProductsScreen() {
     // Memoized keyExtractor for FlatList optimization
     const keyExtractor = useCallback((item: ProductItem) => item.id, []);
 
-    // ✅ ОПТИМИЗИРОВАННЫЙ getItemLayout с учетом реальных отступов
-    const getOptimizedItemLayout = useCallback((_, index) => {
-        if (viewMode === 'grid') {
-            const row = Math.floor(index / 2);
-            const itemHeightWithGap = GRID_CARD_HEIGHT + GRID_GAP;
-            return {
-                length: GRID_CARD_HEIGHT,
-                offset: row * itemHeightWithGap,
-                index
-            };
-        } else {
-            const LIST_ITEM_GAP = 6; // marginBottom из стилей
-            const itemHeightWithGap = LIST_CARD_HEIGHT + LIST_ITEM_GAP;
-            return {
-                length: LIST_CARD_HEIGHT,
-                offset: index * itemHeightWithGap,
-                index
-            };
-        }
-    }, [viewMode]);
-
-    // ✅ Метрики производительности
-    useEffect(() => {
-        if (ENABLE_OPTIMIZATIONS.enableMetrics) {
-            console.log('[Products] Performance metrics:', {
-                itemsCount: filteredItems.length,
-                viewMode,
-                cacheSize: cartSelectorsCache instanceof SelectorCache ? 'LRU' : 'Map',
-                optimizations: ENABLE_OPTIMIZATIONS
-            });
-        }
-    }, [filteredItems.length, viewMode]);
-
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }} edges={['top', 'left', 'right']}>
             {/* Предзагрузка изображений в фоне */}
@@ -642,15 +556,26 @@ export default function ProductsScreen() {
                     contentContainerStyle={viewMode === 'grid' ? styles.gridContainer : styles.listContainer}
                     columnWrapperStyle={viewMode === 'grid' ? { marginBottom: 0, gap: GRID_GAP } : undefined}
                     showsVerticalScrollIndicator={false}
-                    // ✅ ОПТИМИЗИРОВАННЫЕ НАСТРОЙКИ
-                    removeClippedSubviews={true}  // Включаем обратно для производительности
-                    maxToRenderPerBatch={viewMode === 'grid' ? 6 : 8}
-                    initialNumToRender={viewMode === 'grid' ? 8 : 10}
-                    windowSize={10}  // Увеличиваем для предзагрузки
-                    updateCellsBatchingPeriod={50}  // Уменьшаем для отзывчивости
+                    // ✅ ИСПРАВЛЕНО: Настройки для устранения подергивания в конце каталога
+                    removeClippedSubviews={false}  // Отключаем для стабильности в конце списка
+                    maxToRenderPerBatch={viewMode === 'grid' ? 4 : 6}  // Увеличиваем батч
+                    initialNumToRender={viewMode === 'grid' ? 6 : 8}   // Увеличиваем начальный рендер
+                    windowSize={5}  // Увеличиваем окно рендера для стабильности
+                    updateCellsBatchingPeriod={100}  // Увеличиваем период для плавности
                     scrollEventThrottle={16}
-                    getItemLayout={getOptimizedItemLayout}
-                    // ✅ ДОПОЛНИТЕЛЬНЫЕ ОПТИМИЗАЦИИ
+                    getItemLayout={viewMode === 'grid' ?
+                        (_, index) => ({
+                            length: GRID_CARD_HEIGHT,
+                            offset: GRID_CARD_HEIGHT * Math.floor(index / 2),
+                            index,
+                        }) :
+                        (_, index) => ({
+                            length: LIST_CARD_HEIGHT,
+                            offset: LIST_CARD_HEIGHT * index,
+                            index,
+                        })
+                    }
+                    // ✅ ДОПОЛНИТЕЛЬНЫЕ ОПТИМИЗАЦИИ ДЛЯ СТАБИЛЬНОСТИ
                     disableIntervalMomentum={true}
                     legacyImplementation={false}
                     maintainVisibleContentPosition={{
