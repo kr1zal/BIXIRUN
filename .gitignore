@@ -54,3 +54,7 @@ dist/
 # Lock files
 package-lock.json
 yarn.lock
+.venv/
+venv/
+__pycache__/
+*.pyc

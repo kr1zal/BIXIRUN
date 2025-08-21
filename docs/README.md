@@ -41,6 +41,8 @@
   Разработка видеозаписи таймера
 - [`TIMER_VIDEO_ANALYSIS.md`](./development/TIMER_VIDEO_ANALYSIS.md) - Анализ
   реализации видеозаписи
+- [`EXPO_PREBUILD_POLICY.md`](./development/EXPO_PREBUILD_POLICY.md) - Политика
+  по `expo prebuild` (почему не используем, восстановление, защиты)
 
 #### ⚙️ [Implementation](./implementation/)
 

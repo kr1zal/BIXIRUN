@@ -5,6 +5,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { selectCartItemsCount } from '../store/slices/cartSlice.ts';
+import { Perf } from '../utils/perf.ts';
 
 // Define types for our tab items
 type TabIconName = 'home' | 'pricetags' | 'timer' | 'book' | 'cart' | 'person-circle';
@@ -34,6 +35,9 @@ const TabButton = memo(({ active, icon, label, onPress, badge }: TabButtonProps)
         style={styles.footerBtn}
         onPress={onPress}
         activeOpacity={0.7}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: active }}
+        accessibilityLabel={label}
     >
         <View style={styles.tabContent}>
             <View style={styles.iconContainer}>
@@ -50,6 +54,7 @@ const TabButton = memo(({ active, icon, label, onPress, badge }: TabButtonProps)
                     </View>
                 ) : null}
             </View>
+            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
         </View>
     </TouchableOpacity>
 ));
@@ -77,8 +82,10 @@ export const FooterNavigation = memo(() => {
 
     // Handle tab navigation
     const handleTabPress = useCallback((path: TabPath) => {
+        if (__DEV__) Perf.markNavStart(path, pathname);
+        // Для мгновенного отклика без накопления истории используем replace
         router.replace(path);
-    }, [router]);
+    }, [router, pathname]);
 
     return (
         <View style={[styles.footerBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -129,6 +136,15 @@ const styles = StyleSheet.create({
     tabContent: {
         alignItems: 'center',
         justifyContent: 'center'
+    },
+    tabLabel: {
+        marginTop: 4,
+        fontSize: 10,
+        color: '#666',
+    },
+    tabLabelActive: {
+        color: '#000',
+        fontWeight: '600'
     },
     iconContainer: {
         position: 'relative',

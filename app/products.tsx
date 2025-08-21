@@ -454,7 +454,16 @@ const FilterBar = React.memo(({ activeFilter, onFilterChange }: {
                         styles.filterButton,
                         activeFilter === filter.key && styles.filterButtonActive
                     ]}
-                    onPress={() => onFilterChange(filter.key)}
+                    onPress={() => {
+                        const t0 = Date.now();
+                        onFilterChange(filter.key);
+                        if (__DEV__) console.log('⏱️ [FILTER] tap →', filter.key);
+                        requestAnimationFrame(() => {
+                            const dt = Date.now() - t0;
+                            if (__DEV__) console.log('✅ [FILTER] first frame →', filter.key, `${dt} ms`);
+                        });
+                    }}
+                    activeOpacity={1}
                 >
                     <Ionicons
                         name={filter.icon as any}
@@ -508,7 +517,7 @@ export default function ProductsScreen() {
 
     // Memoized handlers
     const handleCardPress = useCallback((slug: string) => {
-        router.replace(`/product/${slug}`);
+        router.push(`/product/${slug}`);
     }, [router]);
 
     const handleFilterChange = useCallback((filter: FilterCategory) => {

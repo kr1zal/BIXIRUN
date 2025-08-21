@@ -51,7 +51,7 @@ const CartSummary = memo(({
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: 72, // Опускаем еще на 3px
+        bottom: 87, // +2
         left: 0,
         right: 0,
         backgroundColor: '#FFFFFF',

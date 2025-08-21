@@ -29,7 +29,7 @@ export default function BlogScreen() {
             return (
                 <ArticleCard
                     item={item}
-                    onPress={() => router.replace(`/blog/${item.id}`)}
+                    onPress={() => router.push(`/blog/${item.id}`)}
                 />
             );
         },

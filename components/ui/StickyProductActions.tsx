@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { memo, useCallback, useState } from 'react';
-import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface StickyProductActionsProps {
@@ -49,13 +49,12 @@ const StickyProductActions = memo(({
     }, [onAddToCart, scaleAnim]);
 
     // Вычисляем корректную позицию bottom
-    // 55px - это наша расчетная высота таб-бара
-    // insets.bottom - это отступ для безопасной зоны на iPhone
-    const bottomPosition = insets.bottom + 55;
+    // Держим блок действий выше кастомного таббара: 72px + безопасная зона
+    const _bottomPosition = insets.bottom + 80; // +8
 
     return (
         // Используем вычисленное значение для `bottom`
-        <View style={[styles.container, { bottom: bottomPosition }]}>
+        <View style={[styles.container, { bottom: insets.bottom + 56 }]}>
             <View style={styles.actionsSection}>
                 {/* Кнопка "Купить сейчас" */}
                 <TouchableOpacity
@@ -132,13 +131,13 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: 0,
         right: 0,
-        // `bottom` теперь устанавливается динамически
+        // `bottom` выставляем динамически из компонента, а здесь тяним белый фон до таббара
         backgroundColor: '#FFFFFF',
         borderTopLeftRadius: 15,
         borderTopRightRadius: 15,
         padding: 12,
         // Добавляем paddingBottom, чтобы контент не прилипал к низу на Android
-        paddingBottom: Platform.OS === 'android' ? 12 : 0,
+        paddingBottom: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -3 },
         shadowOpacity: 0.1,

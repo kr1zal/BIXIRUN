@@ -9,31 +9,31 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		92E1F32CB690B362FDB41577 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C3DC49ADF00A8DC14968E45 /* ExpoModulesProvider.swift */; };
+		6B6435505E1DDEED0F09BCE3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DF13C273275E45676B1BA0C5 /* PrivacyInfo.xcprivacy */; };
+		8C6EECF060C91046F133CBC3 /* libPods-BIXIRUN.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 56CD7B506656E0767B12B677 /* libPods-BIXIRUN.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		BBF959942879093B8ADB71B1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3086C3BC34F3C8AB7C783D27 /* PrivacyInfo.xcprivacy */; };
-		D46DA747740291BB1C3E19EF /* libPods-BIXIRUN.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0CA547A21EF228D91BB0920 /* libPods-BIXIRUN.a */; };
+		EDF1B64ED5F50D77718DE977 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA1AA000A2A34C9BE9334D4A /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		A1F6C2E01B2D4F9A9E8C7B6D /* TimerVideoRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1F6C2DF1B2D4F9A9E8C7B6D /* TimerVideoRecorder.swift */; };
-		A1F6C2E11B2D4F9A9E8C7B6D /* TimerVideoRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = A1F6C2DE1B2D4F9A9E8C7B6D /* TimerVideoRecorder.m */; };
+		C1D2E3F40516273849ABCDEF /* TimerVideoRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6071890ABCDEF /* TimerVideoRecorder.swift */; };
+		D1E2F3A40516273849ABCDEF /* TimerVideoRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E4F506172839ABCDEF /* TimerVideoRecorder.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* BIXIRUN.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BIXIRUN.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = BIXIRUN/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = BIXIRUN/Info.plist; sourceTree = "<group>"; };
-		1C3DC49ADF00A8DC14968E45 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-BIXIRUN/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		3086C3BC34F3C8AB7C783D27 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = BIXIRUN/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		A8C6210141BB7C4B14AFF11E /* Pods-BIXIRUN.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BIXIRUN.debug.xcconfig"; path = "Target Support Files/Pods-BIXIRUN/Pods-BIXIRUN.debug.xcconfig"; sourceTree = "<group>"; };
+		3DCCFE0F9612F8C0186BC6A2 /* Pods-BIXIRUN.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BIXIRUN.debug.xcconfig"; path = "Target Support Files/Pods-BIXIRUN/Pods-BIXIRUN.debug.xcconfig"; sourceTree = "<group>"; };
+		422A4B2A73C466C7459DD5BA /* Pods-BIXIRUN.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BIXIRUN.release.xcconfig"; path = "Target Support Files/Pods-BIXIRUN/Pods-BIXIRUN.release.xcconfig"; sourceTree = "<group>"; };
+		56CD7B506656E0767B12B677 /* libPods-BIXIRUN.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-BIXIRUN.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = BIXIRUN/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C0CA547A21EF228D91BB0920 /* libPods-BIXIRUN.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-BIXIRUN.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		E7EA81E0BE6413D9E6EE21CC /* Pods-BIXIRUN.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BIXIRUN.release.xcconfig"; path = "Target Support Files/Pods-BIXIRUN/Pods-BIXIRUN.release.xcconfig"; sourceTree = "<group>"; };
+		DA1AA000A2A34C9BE9334D4A /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-BIXIRUN/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		DF13C273275E45676B1BA0C5 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = BIXIRUN/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = BIXIRUN/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* BIXIRUN-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "BIXIRUN-Bridging-Header.h"; path = "BIXIRUN/BIXIRUN-Bridging-Header.h"; sourceTree = "<group>"; };
-		A1F6C2DF1B2D4F9A9E8C7B6D /* TimerVideoRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TimerVideoRecorder.swift; path = BIXIRUN/TimerVideoRecorder.swift; sourceTree = "<group>"; };
-		A1F6C2DE1B2D4F9A9E8C7B6D /* TimerVideoRecorder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = TimerVideoRecorder.m; path = BIXIRUN/TimerVideoRecorder.m; sourceTree = "<group>"; };
+		A1B2C3D4E5F6071890ABCDEF /* TimerVideoRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TimerVideoRecorder.swift; path = BIXIRUN/TimerVideoRecorder.swift; sourceTree = "<group>"; };
+		B1C2D3E4F506172839ABCDEF /* TimerVideoRecorder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = TimerVideoRecorder.m; path = BIXIRUN/TimerVideoRecorder.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,7 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D46DA747740291BB1C3E19EF /* libPods-BIXIRUN.a in Frameworks */,
+				8C6EECF060C91046F133CBC3 /* libPods-BIXIRUN.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,13 +53,13 @@
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
 				F11748442D0722820044C1D9 /* BIXIRUN-Bridging-Header.h */,
-				A1F6C2DF1B2D4F9A9E8C7B6D /* TimerVideoRecorder.swift */,
-				A1F6C2DE1B2D4F9A9E8C7B6D /* TimerVideoRecorder.m */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				3086C3BC34F3C8AB7C783D27 /* PrivacyInfo.xcprivacy */,
+				DF13C273275E45676B1BA0C5 /* PrivacyInfo.xcprivacy */,
+				A1B2C3D4E5F6071890ABCDEF /* TimerVideoRecorder.swift */,
+				B1C2D3E4F506172839ABCDEF /* TimerVideoRecorder.m */,
 			);
 			name = BIXIRUN;
 			sourceTree = "<group>";
@@ -68,27 +68,9 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				C0CA547A21EF228D91BB0920 /* libPods-BIXIRUN.a */,
+				56CD7B506656E0767B12B677 /* libPods-BIXIRUN.a */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		4B6D208C8A479EC253D3BE5B /* BIXIRUN */ = {
-			isa = PBXGroup;
-			children = (
-				1C3DC49ADF00A8DC14968E45 /* ExpoModulesProvider.swift */,
-			);
-			name = BIXIRUN;
-			sourceTree = "<group>";
-		};
-		788E4735B6308B6B12CBF632 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				A8C6210141BB7C4B14AFF11E /* Pods-BIXIRUN.debug.xcconfig */,
-				E7EA81E0BE6413D9E6EE21CC /* Pods-BIXIRUN.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -105,8 +87,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				788E4735B6308B6B12CBF632 /* Pods */,
-				9E041C380A6D4BFF6BD53B0B /* ExpoModulesProviders */,
+				E142C37E3D99BCFE8B98E0F4 /* Pods */,
+				E8855212EB9354CBD33F7F80 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -121,14 +103,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		9E041C380A6D4BFF6BD53B0B /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				4B6D208C8A479EC253D3BE5B /* BIXIRUN */,
-			);
-			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -136,6 +110,31 @@
 			);
 			name = Supporting;
 			path = BIXIRUN/Supporting;
+			sourceTree = "<group>";
+		};
+		D96DCC2D659C0299FB0C1B35 /* BIXIRUN */ = {
+			isa = PBXGroup;
+			children = (
+				DA1AA000A2A34C9BE9334D4A /* ExpoModulesProvider.swift */,
+			);
+			name = BIXIRUN;
+			sourceTree = "<group>";
+		};
+		E142C37E3D99BCFE8B98E0F4 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				3DCCFE0F9612F8C0186BC6A2 /* Pods-BIXIRUN.debug.xcconfig */,
+				422A4B2A73C466C7459DD5BA /* Pods-BIXIRUN.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		E8855212EB9354CBD33F7F80 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				D96DCC2D659C0299FB0C1B35 /* BIXIRUN */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -146,13 +145,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "BIXIRUN" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				B25D2921CE09C263395FEDE6 /* [Expo] Configure project */,
+				3BD5CA7B6E008286ECBFECB8 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				E6D81B62E462E02B0B6966FA /* [CP] Embed Pods Frameworks */,
+				DD1C97E8921FCC13C659DB4B /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -172,9 +171,7 @@
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
-						DevelopmentTeam = Q6Y3C67CLV;
 						LastSwiftMigration = 1250;
-						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -204,7 +201,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				BBF959942879093B8ADB71B1 /* PrivacyInfo.xcprivacy in Resources */,
+				6B6435505E1DDEED0F09BCE3 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -247,6 +244,25 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		3BD5CA7B6E008286ECBFECB8 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-BIXIRUN/expo-configure-project.sh\"\n";
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -294,26 +310,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BIXIRUN/Pods-BIXIRUN-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		B25D2921CE09C263395FEDE6 /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-BIXIRUN/expo-configure-project.sh\"\n";
-		};
-		E6D81B62E462E02B0B6966FA /* [CP] Embed Pods Frameworks */ = {
+		DD1C97E8921FCC13C659DB4B /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -339,9 +336,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				92E1F32CB690B362FDB41577 /* ExpoModulesProvider.swift in Sources */,
-				A1F6C2E01B2D4F9A9E8C7B6D /* TimerVideoRecorder.swift in Sources */,
-				A1F6C2E11B2D4F9A9E8C7B6D /* TimerVideoRecorder.m in Sources */,
+				EDF1B64ED5F50D77718DE977 /* ExpoModulesProvider.swift in Sources */,
+				C1D2E3F40516273849ABCDEF /* TimerVideoRecorder.swift in Sources */,
+				D1E2F3A40516273849ABCDEF /* TimerVideoRecorder.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -350,13 +347,11 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A8C6210141BB7C4B14AFF11E /* Pods-BIXIRUN.debug.xcconfig */;
+			baseConfigurationReference = 3DCCFE0F9612F8C0186BC6A2 /* Pods-BIXIRUN.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = BIXIRUN/BIXIRUN.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q6Y3C67CLV;
 				ENABLE_BITCODE = NO;
@@ -389,13 +384,11 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E7EA81E0BE6413D9E6EE21CC /* Pods-BIXIRUN.release.xcconfig */;
+			baseConfigurationReference = 422A4B2A73C466C7459DD5BA /* Pods-BIXIRUN.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = BIXIRUN/BIXIRUN.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Q6Y3C67CLV;
 				INFOPLIST_FILE = BIXIRUN/Info.plist;
@@ -475,10 +468,7 @@
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
@@ -533,10 +523,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					" ",
-				);
+				OTHER_LDFLAGS = "$(inherited)  ";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;

@@ -22,7 +22,6 @@ export const getOptimizedImageUrl = (
         url.searchParams.set('width', targetSize.width.toString());
         url.searchParams.set('height', targetSize.height.toString());
         url.searchParams.set('quality', quality.toString());
-        url.searchParams.set('format', 'webp');
         return url.toString();
     }
 

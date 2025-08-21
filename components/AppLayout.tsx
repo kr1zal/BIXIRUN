@@ -8,6 +8,7 @@ import { Provider } from 'react-redux';
 import { AuthProvider } from './AuthProvider.tsx';
 import CartInitializer from './CartInitializer.tsx';
 import { FooterNavigation } from './FooterNavigation.tsx';
+import { Perf } from '../utils/perf.ts';
 
 type AppLayoutProps = {
     children: React.ReactNode;
@@ -15,19 +16,24 @@ type AppLayoutProps = {
 
 // Memoize the AppLayout to prevent unnecessary re-renders
 export const AppLayout = memo(({ children }: AppLayoutProps) => {
-    const insets = useSafeAreaInsets();
+    const _insets = useSafeAreaInsets();
     const pathname = usePathname();
 
-    // TabBar скрыт на специальных страницах
-    // Показываем таббар на главной всегда и после replace('/main')
-    const hideTabBarRoutes = ['/timerWorkout', '/auth', '/splash', '/checkout'];
-    const showTabBar = !hideTabBarRoutes.includes(pathname);
+    React.useEffect(() => {
+        if (__DEV__) Perf.markPathFocus(pathname);
+        // сброс статуса навигации после фокуса
+        if (__DEV__) Perf.resetIfDone(pathname);
+    }, [pathname]);
+
+    // Показываем таббар везде, кроме таймера и его вложенных экранов
+    const hideRoutes = ['/timerWorkout', '/checkout'];
+    const showTabBar = !hideRoutes.some((p) => pathname.startsWith(p));
 
     return (
         <Provider store={store}>
             <AuthProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
-                    <View style={styles.container}>
+                    <View style={styles.container} onLayout={() => { if (__DEV__) Perf.markFirstLayout(pathname); }}>
                         <CartInitializer />
                         {children}
                         {showTabBar && <FooterNavigation />}

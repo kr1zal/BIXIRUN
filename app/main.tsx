@@ -4,6 +4,7 @@ import React, { memo, useCallback, useEffect } from 'react';
 import {
     ActivityIndicator,
     Dimensions,
+    InteractionManager,
     FlatList,
     StyleSheet,
     Text,
@@ -14,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import OptimizedImage from '../components/ui/OptimizedImage.tsx';
 import { useAppDispatch, useAppSelector } from '../store/hooks.ts';
+import { useFlatListOptimization } from '../hooks/useFlatListOptimization.ts';
 import {
     ArticleItem,
     fetchArticles,
@@ -25,6 +27,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_GAP = 3;
 const GRID_CARD_WIDTH = (SCREEN_WIDTH - GRID_GAP * 3) / 2;
 const GRID_CARD_HEIGHT = GRID_CARD_WIDTH * (5 / 4) + 80; // Рассчитанная высота для карточки
+const ARTICLE_CARD_WIDTH = SCREEN_WIDTH * 0.7;
 
 const TIMER_COVER_URL = 'https://wesrkttwjuvclvfkuxzx.supabase.co/storage/v1/object/public/images/Timer/MainTimer/main_timer.webp';
 
@@ -45,6 +48,8 @@ const ProductGridCard = memo(({ item, onPress }: { item: ProductItem; onPress: (
                             source={{ uri: imageUrl }}
                             style={styles.productImage}
                             contentFit="cover"
+                            width={GRID_CARD_WIDTH}
+                            height={GRID_CARD_WIDTH * (4 / 5)}
                         />
                     ) : (
                         <View style={styles.imagePlaceholder} />
@@ -65,7 +70,12 @@ const ArticleCard = memo(({ item, onPress }: { item: ArticleItem; onPress: () =>
     <TouchableOpacity style={styles.articleCard} onPress={onPress} activeOpacity={0.85}>
         <View style={styles.articleImageContainer}>
             {item.cover_image_url && (
-                <OptimizedImage source={{ uri: item.cover_image_url }} style={styles.productImage} />
+                <OptimizedImage
+                    source={{ uri: item.cover_image_url }}
+                    style={styles.productImage}
+                    width={ARTICLE_CARD_WIDTH}
+                    height={ARTICLE_CARD_WIDTH * (9 / 16)}
+                />
             )}
         </View>
         <View style={styles.articleTextBlock}>
@@ -81,14 +91,20 @@ export default function MainScreen() {
     const { items: products, status: productsStatus } = useAppSelector((state: any) => state.products);
     const { items: articles, status: articlesStatus } = useAppSelector((state: any) => state.articles);
 
-    useEffect(() => {
-        if (productsStatus === 'idle') {
-            dispatch(fetchProducts());
-        }
-        if (articlesStatus === 'idle') {
-            dispatch(fetchArticles());
-        }
+    // ВАЖНО: вызывать хуки до любых ранних return
+    const listPerf = useFlatListOptimization<ProductItem>({ itemHeight: GRID_CARD_HEIGHT, columns: 2 });
 
+    useEffect(() => {
+        // Откладываем сетевые запросы до окончания первого кадра/интеракций
+        const task = InteractionManager.runAfterInteractions(() => {
+            if (productsStatus === 'idle') {
+                dispatch(fetchProducts());
+            }
+            if (articlesStatus === 'idle') {
+                dispatch(fetchArticles());
+            }
+        });
+        return () => task.cancel();
     }, [dispatch, productsStatus, articlesStatus]);
 
     const handleProductPress = useCallback((slug: string) => {
@@ -155,6 +171,8 @@ export default function MainScreen() {
                 contentContainerStyle={{ padding: GRID_GAP, paddingBottom: 100 }}
                 columnWrapperStyle={{ gap: GRID_GAP }}
                 showsVerticalScrollIndicator={false}
+                removeClippedSubviews
+                {...listPerf}
             />
         </SafeAreaView>
     );

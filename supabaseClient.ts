@@ -1,14 +1,25 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorageModule from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import Constants from 'expo-constants';
 import { AppState } from 'react-native';
-import 'react-native-url-polyfill/auto';
+// @ts-ignore Polyfill resolved by Metro in RN; type resolver may not find it here
+require('react-native-url-polyfill/auto');
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+// Access via any to avoid type mismatch across envs
+const extra: any = (Constants as any).expoConfig?.extra ?? {};
+const SUPABASE_URL = extra.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = extra.supabaseAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+
+// Normalize AsyncStorage shape to the interface Supabase expects
+const NormalizedAsyncStorage = {
+    getItem: (key: string): Promise<string | null> => (AsyncStorageModule as any).getItem(key),
+    setItem: (key: string, value: string): Promise<void> => (AsyncStorageModule as any).setItem(key, value),
+    removeItem: (key: string): Promise<void> => (AsyncStorageModule as any).removeItem(key),
+};
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
-        storage: AsyncStorage,
+        storage: NormalizedAsyncStorage,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,

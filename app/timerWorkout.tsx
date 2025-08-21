@@ -91,7 +91,7 @@ export default function TimerWorkout() {
 
     // ✅ ИСПРАВЛЕННАЯ инициализация таймера - ОДИН раз через setTimerConfig
     useEffect(() => {
-        console.log('🔧 Инициализация таймера с параметрами:', params);
+        if (__DEV__) console.log('🔧 Инициализация таймера с параметрами:', params);
 
         const config = {
             prep: params.prep ? Number(params.prep) : undefined,
@@ -107,12 +107,12 @@ export default function TimerWorkout() {
         // Устанавливаем конфигурацию ОДНИМ действием
         dispatch(setTimerConfig(config));
 
-        console.log('✅ Инициализация завершена');
+        if (__DEV__) console.log('✅ Инициализация завершена');
     }, []); // Пустой массив зависимостей - выполняется ТОЛЬКО один раз
 
     // Интервал для обновления таймера
     useInterval(() => {
-        console.log('⏰ Тик таймера:', {
+        if (__DEV__) console.log('⏰ Тик таймера:', {
             running: timerState.running,
             isPaused: isPaused,
             seconds: timerState.seconds,
@@ -120,19 +120,19 @@ export default function TimerWorkout() {
         });
 
         if (timerState.running && !isPaused) {
-            console.log('⬇️ Уменьшаем секунды с', timerState.seconds, 'до', timerState.seconds - 1);
+            if (__DEV__) console.log('⬇️ Уменьшаем секунды с', timerState.seconds, 'до', timerState.seconds - 1);
             dispatch(decrementSeconds());
 
 
 
             // Переход к следующей фазе если время истекло
             if (timerState.seconds <= 0) {
-                console.log('🔔 Время истекло! Переходим к следующей фазе');
+                if (__DEV__) console.log('🔔 Время истекло! Переходим к следующей фазе');
                 playSound();
                 dispatch(nextPhase());
             }
         } else {
-            console.log('⏸️ Таймер не тикает:', { running: timerState.running, isPaused: isPaused });
+            if (__DEV__) console.log('⏸️ Таймер не тикает:', { running: timerState.running, isPaused: isPaused });
         }
     }, timerState.running && !isPaused ? 1000 : null);
 
@@ -190,7 +190,7 @@ export default function TimerWorkout() {
         if (!isRecording) {
             // СТАРТ - автоматическая запись с нативным модулем
             try {
-                console.log('🎬 СТАРТ: Автоматическая запись видео с таймером');
+                if (__DEV__) console.log('🎬 СТАРТ: Автоматическая запись видео с таймером');
 
                 // Проверяем разрешения
                 if (!hasCameraPermission || !hasMicrophonePermission) {
@@ -227,7 +227,7 @@ export default function TimerWorkout() {
 
                 // Запускаем нативную запись видео
                 const result = await getTimerVideoRecorder().startRecording(config);
-                console.log('✅ Запись началась:', result);
+                if (__DEV__) console.log('✅ Запись началась:', result);
 
                 setIsRecording(true);
 
@@ -243,14 +243,14 @@ export default function TimerWorkout() {
         } else {
             // СТОП - автоматическое сохранение видео
             try {
-                console.log('⏹️ СТОП: Автоматическое сохранение видео');
+                if (__DEV__) console.log('⏹️ СТОП: Автоматическое сохранение видео');
 
                 // Останавливаем таймер
                 dispatch(pauseTimer());
 
                 // Останавливаем нативную запись
                 const result = await getTimerVideoRecorder().stopRecording();
-                console.log('✅ Видео автоматически сохранено:', result);
+                if (__DEV__) console.log('✅ Видео автоматически сохранено:', result);
 
                 setIsRecording(false);
 
@@ -277,11 +277,11 @@ export default function TimerWorkout() {
 
         try {
             if (isPaused) {
-                console.log('▶️ ДАЛЕЕ: Возобновляем таймер');
+                if (__DEV__) console.log('▶️ ДАЛЕЕ: Возобновляем таймер');
                 dispatch(startTimer());
                 setIsPaused(false);
             } else {
-                console.log('⏸️ ПАУЗА: Приостанавливаем таймер');
+                if (__DEV__) console.log('⏸️ ПАУЗА: Приостанавливаем таймер');
                 dispatch(pauseTimer());
                 setIsPaused(true);
             }
@@ -292,7 +292,7 @@ export default function TimerWorkout() {
 
     // 3. Кнопка СБРОС - рефрешит таймер
     const handleReset = useCallback(() => {
-        console.log('🔄 Сброс таймера');
+        if (__DEV__) console.log('🔄 Сброс таймера');
 
         // Сбрасываем все состояния
         setIsRecording(false);
@@ -385,7 +385,7 @@ export default function TimerWorkout() {
                     progressText: `${timerState.currentCycle}/${timerState.cycles} • Сет ${timerState.currentSet}`,
                     progressRatio: progress,
                 });
-                console.log('🔄 Обновили таймер в видео:', {
+                if (__DEV__) console.log('🔄 Обновили таймер в видео:', {
                     time: formatTime(timerState.seconds),
                     phase: phaseInfo?.name ?? '',
                     progress: `${timerState.currentCycle}/${timerState.cycles} • Сет ${timerState.currentSet}`

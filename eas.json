@@ -1,0 +1,29 @@
+{
+  "build": {
+    "production": {
+      "channel": "production",
+      "ios": {
+        "distribution": "store",
+        "autoIncrement": true,
+        "resourceClass": "m-medium"
+      }
+    },
+    "preview": {
+      "channel": "preview",
+      "ios": {
+        "distribution": "internal",
+        "resourceClass": "m-medium"
+      }
+    },
+    "development": {
+      "developmentClient": true,
+      "channel": "development",
+      "ios": {
+        "distribution": "internal",
+        "resourceClass": "m-medium"
+      }
+    }
+  }
+}
+
+

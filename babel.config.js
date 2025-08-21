@@ -12,7 +12,9 @@ module.exports = function (api) {
                         '@': './'
                     }
                 }
-            ]
+            ],
+            // ВАЖНО: плагин Reanimated должен быть последним
+            'react-native-reanimated/plugin'
         ]
     };
 }; 

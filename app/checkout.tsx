@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +13,8 @@ import {
   TextInput,
   Image,
   View,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -38,6 +40,41 @@ export default function CheckoutScreen() {
   const [promo, setPromo] = useState<string>('');
   const insets = useSafeAreaInsets();
   const { cartItems, cartSummary } = useCart();
+
+  // Swipe-to-dismiss for Recipient bottom sheet
+  const recipientTranslateY = useRef(new Animated.Value(0)).current;
+  const recipientPanResponder = useRef(
+    PanResponder.create({
+       onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 5 && Math.abs(g.dy) > Math.abs(g.dx),
+      onMoveShouldSetPanResponderCapture: () => true,
+      onPanResponderMove: (_e, g) => {
+        if (g.dy > 0) recipientTranslateY.setValue(g.dy);
+      },
+      onPanResponderRelease: (_e, g) => {
+        const shouldClose = g.dy > 90 || g.vy > 0.8;
+        if (shouldClose) {
+          Animated.timing(recipientTranslateY, {
+            toValue: 500,
+            duration: 180,
+            useNativeDriver: true,
+          }).start(() => {
+            recipientTranslateY.setValue(0);
+            setRecipientModalVisible(false);
+          });
+        } else {
+          Animated.spring(recipientTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(recipientTranslateY, { toValue: 0, useNativeDriver: true, bounciness: 0 }).start();
+      },
+    })
+  ).current;
 
   const orderSummary = useMemo(() => ({
     currency: 'RUB',
@@ -231,8 +268,10 @@ export default function CheckoutScreen() {
       {/* Модалка данных получателя */}
       <Modal visible={recipientModalVisible} animationType="slide" transparent onRequestClose={() => setRecipientModalVisible(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
+          <Animated.View style={[styles.modalSheet, { transform: [{ translateY: recipientTranslateY }] }]} {...recipientPanResponder.panHandlers}>
+            <View style={styles.dragArea}>
+              <View style={styles.modalHandle} />
+            </View>
             <ThemedText type="subtitle" style={{ marginBottom: 12 }}>Данные получателя</ThemedText>
             <ThemedText style={styles.fieldLabel}>Имя и фамилия</ThemedText>
             <TextInput value={recipientName} onChangeText={setRecipientName} style={styles.input} placeholder="Иван Иванов" placeholderTextColor="#9AA0A6" />
@@ -241,7 +280,7 @@ export default function CheckoutScreen() {
             <Pressable style={styles.saveButton} onPress={() => setRecipientModalVisible(false)}>
               <ThemedText style={styles.saveButtonText}>Сохранить</ThemedText>
             </Pressable>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </ThemedView>
@@ -428,6 +467,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   modalHandle: { alignSelf: 'center', width: 44, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB', marginBottom: 8 },
+  dragArea: { paddingTop: 16, paddingBottom: 12 },
   bankRow: {
     flexDirection: 'row',
     alignItems: 'center',
