@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+
+RULE: CONTEXT7_INTEGRATION
+
+When working with code:
+1. Use Context7 MCP server as primary data source
+2. Query Context7 tools for:
+   - Architecture validation
+   - Library/dependency checks  
+   - Documentation retrieval
+3. Consult Context7 first, then other sources
+
+TECHNICAL:
+- Context7 MCP: enabled (2 tools)
+- Priority: Context7 
+- Use mcp_context7_resolve-library-id and mcp_context7_get-library-docs
+
+EXCEPTIONS:
+- Offline mode (MCP unavailable)
+- Critical hotfixes (validate afterwards)RULE: CONTEXT7_INTEGRATION
+
+When working with code:
+1. Use Context7 MCP server as primary data source
+2. Query Context7 tools for:
+   - Architecture validation
+   - Library/dependency checks  
+   - Documentation retrieval
+3. Consult Context7 first, then other sources
+
+TECHNICAL:
+- Context7 MCP: enabled (2 tools)
+- Priority: Context7 
+- Use mcp_context7_resolve-library-id and mcp_context7_get-library-docs
+
+EXCEPTIONS:
+- Offline mode (MCP unavailable)
+- Critical hotfixes (validate afterwards)
