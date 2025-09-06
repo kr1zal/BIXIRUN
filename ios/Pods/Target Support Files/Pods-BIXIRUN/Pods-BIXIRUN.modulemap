@@ -1,0 +1,6 @@
+module Pods_BIXIRUN {
+  umbrella header "Pods-BIXIRUN-umbrella.h"
+
+  export *
+  module * { export * }
+}

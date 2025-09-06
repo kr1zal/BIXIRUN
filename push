@@ -1,0 +1,6 @@
+cat > config.toml <<
+'EOF'
+
+[auth]
+REFRESH_TOKEN_LENGTH = 64
+EOF

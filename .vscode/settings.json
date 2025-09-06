@@ -1,0 +1,14 @@
+{
+  "deno.enable": true,
+  "deno.enablePaths": [
+    "supabase/"
+  ],
+  "deno.lint": true,
+  "deno.unstable": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.workingDirectories": [
+    { "mode": "auto" }
+  ]
+}
+
+
